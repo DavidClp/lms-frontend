@@ -9,7 +9,7 @@ services:
     networks:
       - proxy
     ports:
-      - "3000:3000" 
+      - "3090:3090" 
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_GERENCIANET_ACCOUNT_ID: ${NEXT_PUBLIC_GERENCIANET_ACCOUNT_ID}
