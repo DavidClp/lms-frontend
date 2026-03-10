@@ -29,6 +29,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
   const token = localStorage.getItem('lms_token');
 
+      console.log("token", token)
+      console.log("options", options)
+      console.log("endpoint", endpoint)
+      console.log("endpoin2t", options?.headers)
+      console.log("API_URL", API_URL)
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {

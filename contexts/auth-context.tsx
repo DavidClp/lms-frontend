@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (credentials: LoginCredentials) => {
+        console.log("credentials", credentials)
     const { user, token } = await authApi.login(credentials)
     localStorage.setItem('lms_user', JSON.stringify(user))
     localStorage.setItem('lms_token', token)
