@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { ContentBlock, QuizBlock } from '@/types'
-import { Video, CheckSquare, FileText, HelpCircle, CheckCircle, XCircle } from 'lucide-react'
+import type { ContentBlock, QuizBlock, ImagesBlock } from '@/types'
+import { Video, CheckSquare, FileText, HelpCircle, CheckCircle, XCircle, ImageIcon } from 'lucide-react'
+import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 interface BlockRendererProps {
@@ -24,6 +25,7 @@ export function BlockRenderer({ blocks }: BlockRendererProps) {
             <ChecklistBlockComponent title={block.title} items={block.items} />
           )}
           {block.type === 'QUIZ' && <QuizBlockComponent block={block} />}
+          {block.type === 'IMAGES' && <ImagesBlockComponent block={block} />}
         </div>
       ))}
     </div>
@@ -135,6 +137,38 @@ function ChecklistBlockComponent({ title, items }: { title?: string; items: stri
             </div>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
+  if (!block.imageIds || block.imageIds.length === 0) return null
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+          <ImageIcon className="h-4 w-4 text-primary" />
+          <span>Imagens</span>
+        </div>
+        <div className={cn(
+          'grid gap-3',
+          block.imageIds.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+        )}>
+          {block.imageIds.map((id) => (
+            <div key={id} className="overflow-hidden rounded-lg border bg-muted">
+              <img
+                src={imagesApi.getUrl(id)}
+                alt={block.caption ?? ''}
+                className="w-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+        {block.caption && (
+          <p className="mt-2 text-center text-sm text-muted-foreground italic">{block.caption}</p>
+        )}
       </CardContent>
     </Card>
   )

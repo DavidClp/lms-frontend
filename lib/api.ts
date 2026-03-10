@@ -185,6 +185,30 @@ export const usersApi = {
     }),
 }
 
+// Images API
+export interface UploadedImage {
+  id: string
+  fileName: string
+  size: number
+  mimeType: string
+}
+
+export const imagesApi = {
+  upload: async (files: File[]): Promise<UploadedImage[]> => {
+    const token = localStorage.getItem('lms_token')
+    const formData = new FormData()
+    files.forEach((file) => formData.append('images', file))
+    const response = await fetch(`${API_URL}/images`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`)
+    return response.json()
+  },
+  getUrl: (id: string) => `${API_URL}/images/${id}`,
+}
+
 // Progress API
 export const progressApi = {
   getUserProgress: (_userId: string) => fetchApi<Progress[]>(`/progress/user`),

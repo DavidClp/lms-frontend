@@ -1,6 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,8 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle } from 'lucide-react'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2 } from 'lucide-react'
 import type { ContentBlock, BlockType } from '@/types'
+import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 interface BlockEditorProps {
@@ -25,6 +41,18 @@ interface BlockEditorProps {
 export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   const [addingType, setAddingType] = useState<BlockType | ''>('')
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = Number(active.id)
+    const newIndex = Number(over.id)
+    onChange(arrayMove(blocks, oldIndex, newIndex))
+  }
+
   const addBlock = () => {
     if (!addingType) return
     let newBlock: ContentBlock
@@ -34,6 +62,8 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
       newBlock = { type: 'VIDEO', url: '', title: '' }
     } else if (addingType === 'ACTIVITY_CHECKLIST') {
       newBlock = { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
+    } else if (addingType === 'IMAGES') {
+      newBlock = { type: 'IMAGES', imageIds: [], caption: '' }
     } else {
       newBlock = {
         type: 'QUIZ',
@@ -59,6 +89,9 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     onChange(next)
   }
 
+  // Use index as string ID for DnD
+  const itemIds = blocks.map((_, i) => String(i))
+
   return (
     <div className="space-y-4">
       {blocks.length === 0 && (
@@ -67,55 +100,59 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
         </p>
       )}
 
-      {blocks?.map((block, index) => (
-        <div key={index} className="flex gap-2">
-          <div className="mt-3 cursor-grab text-muted-foreground">
-            <GripVertical className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            {block.type === 'TEXT' && (
-              <TextBlockEditor
-                value={block.value}
-                onChange={(value) => updateBlock(index, { type: 'TEXT', value })}
-              />
-            )}
-            {block.type === 'VIDEO' && (
-              <VideoBlockEditor
-                url={block.url}
-                title={block.title}
-                onChange={(url, title) => updateBlock(index, { type: 'VIDEO', url, title })}
-              />
-            )}
-            {block.type === 'ACTIVITY_CHECKLIST' && (
-              <ChecklistBlockEditor
-                title={block.title}
-                items={block.items}
-                onChange={(title, items) =>
-                  updateBlock(index, { type: 'ACTIVITY_CHECKLIST', title, items })
-                }
-              />
-            )}
-            {block.type === 'QUIZ' && (
-              <QuizBlockEditor
-                question={block.question}
-                options={block.options}
-                correctOptionId={block.correctOptionId}
-                onChange={(question, options, correctOptionId) =>
-                  updateBlock(index, { type: 'QUIZ', question, options, correctOptionId })
-                }
-              />
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mt-2 shrink-0 text-destructive hover:text-destructive"
-            onClick={() => removeBlock(index)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          {blocks.map((block, index) => (
+            <SortableBlockItem
+              key={index}
+              id={String(index)}
+              onRemove={() => removeBlock(index)}
+            >
+              {block.type === 'TEXT' && (
+                <TextBlockEditor
+                  value={block.value}
+                  onChange={(value) => updateBlock(index, { type: 'TEXT', value })}
+                />
+              )}
+              {block.type === 'VIDEO' && (
+                <VideoBlockEditor
+                  url={block.url}
+                  title={block.title}
+                  onChange={(url, title) => updateBlock(index, { type: 'VIDEO', url, title })}
+                />
+              )}
+              {block.type === 'ACTIVITY_CHECKLIST' && (
+                <ChecklistBlockEditor
+                  title={block.title}
+                  items={block.items}
+                  onChange={(title, items) =>
+                    updateBlock(index, { type: 'ACTIVITY_CHECKLIST', title, items })
+                  }
+                />
+              )}
+              {block.type === 'QUIZ' && (
+                <QuizBlockEditor
+                  question={block.question}
+                  options={block.options}
+                  correctOptionId={block.correctOptionId}
+                  onChange={(question, options, correctOptionId) =>
+                    updateBlock(index, { type: 'QUIZ', question, options, correctOptionId })
+                  }
+                />
+              )}
+              {block.type === 'IMAGES' && (
+                <ImageBlockEditor
+                  imageIds={block.imageIds}
+                  caption={block.caption}
+                  onChange={(imageIds, caption) =>
+                    updateBlock(index, { type: 'IMAGES', imageIds, caption })
+                  }
+                />
+              )}
+            </SortableBlockItem>
+          ))}
+        </SortableContext>
+      </DndContext>
 
       <div className="flex gap-2 pt-2">
         <Select value={addingType} onValueChange={(v) => setAddingType(v as BlockType)}>
@@ -143,6 +180,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <HelpCircle className="h-4 w-4" /> Quiz
               </div>
             </SelectItem>
+            <SelectItem value="IMAGES">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" /> Imagens
+              </div>
+            </SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={addBlock} disabled={!addingType} variant="outline">
@@ -150,6 +192,47 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
           Adicionar
         </Button>
       </div>
+    </div>
+  )
+}
+
+function SortableBlockItem({
+  id,
+  children,
+  onRemove,
+}: {
+  id: string
+  children: React.ReactNode
+  onRemove: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn('flex gap-2', isDragging && 'opacity-50')}
+    >
+      <div
+        className="mt-3 cursor-grab active:cursor-grabbing text-muted-foreground touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </div>
+      <div className="flex-1">{children}</div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="mt-2 shrink-0 text-destructive hover:text-destructive"
+        onClick={onRemove}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
     </div>
   )
 }
@@ -276,6 +359,103 @@ function ChecklistBlockEditor({
           <Button variant="outline" size="sm" onClick={addItem}>
             <Plus className="h-4 w-4 mr-1" /> Adicionar item
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ImageBlockEditor({
+  imageIds,
+  caption,
+  onChange,
+}: {
+  imageIds: string[]
+  caption?: string
+  onChange: (imageIds: string[], caption?: string) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [previews, setPreviews] = useState<{ id: string; url: string }[]>([])
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setUploading(true)
+    try {
+      const uploaded = await imagesApi.upload(Array.from(files))
+      const newPreviews = uploaded.map((img) => ({
+        id: img.id,
+        url: imagesApi.getUrl(img.id),
+      }))
+      setPreviews((prev) => [...prev, ...newPreviews])
+      onChange([...imageIds, ...uploaded.map((img) => img.id)], caption)
+    } catch {
+      // silently ignore upload errors in editor
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = (id: string) => {
+    setPreviews((prev) => prev.filter((p) => p.id !== id))
+    onChange(imageIds.filter((imgId) => imgId !== id), caption)
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <ImageIcon className="h-4 w-4" /> Imagens
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {previews.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {previews.map((preview) => (
+              <div key={preview.id} className="relative group rounded-lg overflow-hidden border bg-muted aspect-video">
+                <img
+                  src={preview.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(preview.id)}
+                  className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <Label
+          htmlFor={`img-upload-${imageIds.join('-')}`}
+          className={cn(
+            'flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-sm text-muted-foreground transition-colors hover:bg-muted/50',
+            uploading && 'pointer-events-none opacity-50'
+          )}
+        >
+          {uploading ? (
+            <><Loader2 className="mb-2 h-5 w-5 animate-spin" /> Enviando...</>
+          ) : (
+            <><ImageIcon className="mb-2 h-5 w-5" /> Clique para adicionar imagens</>
+          )}
+          <input
+            id={`img-upload-${imageIds.join('-')}`}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+        </Label>
+        <div className="space-y-1">
+          <Label>Legenda (opcional)</Label>
+          <Input
+            value={caption ?? ''}
+            onChange={(e) => onChange(imageIds, e.target.value || undefined)}
+            placeholder="Legenda das imagens"
+          />
         </div>
       </CardContent>
     </Card>

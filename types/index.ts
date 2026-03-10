@@ -30,7 +30,7 @@ export interface Lesson {
   updatedAt?: string
 }
 
-export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ'
+export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ' | 'IMAGES'
 
 export interface TextBlock {
   type: 'TEXT'
@@ -61,7 +61,13 @@ export interface QuizBlock {
   correctOptionId: string
 }
 
-export type ContentBlock = TextBlock | VideoBlock | ActivityChecklistBlock | QuizBlock
+export interface ImagesBlock {
+  type: 'IMAGES'
+  imageIds: string[]
+  caption?: string
+}
+
+export type ContentBlock = TextBlock | VideoBlock | ActivityChecklistBlock | QuizBlock | ImagesBlock
 
 export interface Progress {
   id: string
