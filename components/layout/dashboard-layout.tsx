@@ -85,7 +85,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
           {!sidebarCollapsed && (
             <Link href={role === 'ADMIN' ? '/admin' : '/dashboard'} className="flex items-center gap-2">
               <GraduationCap className="h-8 w-8 text-primary" />
-              <span className="text-lg font-bold">LMS</span>
+              <span className="text-lg font-bold">Curso de Informática</span>
             </Link>
           )}
           {sidebarCollapsed && (
