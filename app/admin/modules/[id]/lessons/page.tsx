@@ -1,0 +1,306 @@
+'use client'
+
+import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { Plus, ArrowLeft, Edit, Trash2, GripVertical, FileText } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Spinner } from '@/components/ui/spinner'
+import { PageHeader } from '@/components/layout/page-header'
+import { EmptyState } from '@/components/layout/empty-state'
+import { useModule, useModuleLessons, useCreateLesson, useUpdateLesson, useDeleteLesson } from '@/hooks/use-api'
+import type { Lesson, CreateLessonData } from '@/types'
+
+export default function ModuleLessonsPage() {
+  const params = useParams()
+  const router = useRouter()
+  const moduleId = params.id as string
+  
+  const { data: module, isLoading: moduleLoading } = useModule(moduleId)
+  const { data: lessons = [], isLoading: lessonsLoading } = useModuleLessons(moduleId)
+  const createLesson = useCreateLesson()
+  const updateLesson = useUpdateLesson()
+  const deleteLesson = useDeleteLesson()
+  
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
+  const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null)
+  
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateLessonData>({
+    defaultValues: {
+      moduleId,
+      title: '',
+      order: lessons.length + 1,
+      content: [],
+    }
+  })
+
+  const isLoading = moduleLoading || lessonsLoading
+
+  const openCreateDialog = () => {
+    setEditingLesson(null)
+    reset({
+      moduleId,
+      title: '',
+      order: lessons.length + 1,
+      content: [],
+    })
+    setIsDialogOpen(true)
+  }
+
+  const openEditDialog = (lesson: Lesson) => {
+    setEditingLesson(lesson)
+    reset({
+      moduleId: lesson.moduleId,
+      title: lesson.title,
+      order: lesson.order,
+      content: lesson.content,
+    })
+    setIsDialogOpen(true)
+  }
+
+  const onSubmit = async (data: CreateLessonData) => {
+    try {
+      if (editingLesson) {
+        await updateLesson.mutateAsync({ id: editingLesson.id, data })
+        toast.success('Aula atualizada com sucesso!')
+      } else {
+        await createLesson.mutateAsync(data)
+        toast.success('Aula criada com sucesso!')
+      }
+      setIsDialogOpen(false)
+      reset()
+    } catch {
+      toast.error('Erro ao salvar aula')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deletingLessonId) return
+    try {
+      await deleteLesson.mutateAsync(deletingLessonId)
+      toast.success('Aula excluída com sucesso!')
+      setDeletingLessonId(null)
+    } catch {
+      toast.error('Erro ao excluir aula')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    )
+  }
+
+  if (!module) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Módulo não encontrado</p>
+        <Button variant="outline" onClick={() => router.push('/admin/modules')}>
+          Voltar para Módulos
+        </Button>
+      </div>
+    )
+  }
+
+  const sortedLessons = [...lessons].sort((a, b) => a.order - b.order)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href={`/admin/modules/${moduleId}`}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <PageHeader
+          title={`Aulas: ${module.title}`}
+          description="Gerencie as aulas deste módulo"
+          action={
+            <Button onClick={openCreateDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Aula
+            </Button>
+          }
+        />
+      </div>
+
+      {sortedLessons.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="Nenhuma aula cadastrada"
+          description="Este módulo ainda não possui aulas. Comece criando a primeira."
+          action={
+            <Button onClick={openCreateDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Criar Primeira Aula
+            </Button>
+          }
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Aulas</CardTitle>
+            <CardDescription>
+              {sortedLessons.length} {sortedLessons.length === 1 ? 'aula' : 'aulas'} neste módulo
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {sortedLessons.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  className="flex items-center justify-between rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-4">
+                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                      {lesson.order}
+                    </div>
+                    <div>
+                      <h4 className="font-medium">{lesson.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {lesson.content.length} {lesson.content.length === 1 ? 'bloco' : 'blocos'} de conteúdo
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/lessons/${lesson.id}`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar Conteúdo
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(lesson)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeletingLessonId(lesson.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialog de Criar/Editar */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingLesson ? 'Editar Aula' : 'Nova Aula'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingLesson 
+                ? 'Atualize as informações básicas da aula'
+                : 'Adicione uma nova aula a este módulo'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input
+                id="title"
+                {...register('title', { required: 'Título é obrigatório' })}
+                placeholder="Ex: O que é um computador?"
+              />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="order">Ordem</Label>
+              <Input
+                id="order"
+                type="number"
+                min={1}
+                {...register('order', { 
+                  required: 'Ordem é obrigatória',
+                  valueAsNumber: true,
+                  min: { value: 1, message: 'Ordem deve ser no mínimo 1' }
+                })}
+              />
+              {errors.order && (
+                <p className="text-sm text-destructive">{errors.order.message}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createLesson.isPending || updateLesson.isPending}>
+                {(createLesson.isPending || updateLesson.isPending) && (
+                  <Spinner className="mr-2 h-4 w-4" />
+                )}
+                {editingLesson ? 'Salvar Alterações' : 'Criar Aula'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={!!deletingLessonId} onOpenChange={() => setDeletingLessonId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Aula</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta aula? Esta ação não pode ser desfeita.
+              Todo o conteúdo da aula será perdido.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLesson.isPending ? (
+                <Spinner className="mr-2 h-4 w-4" />
+              ) : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}

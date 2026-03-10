@@ -1,0 +1,48 @@
+name: Deploy Next.js LMS Frontend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=30 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            set -e
+
+            # Clona ou atualiza o repositório
+            if [ ! -d "/home/david/lms-frontend/.git" ]; then
+              rm -rf /home/david/lms-frontend
+              git clone https://github.com/${{ github.repository }} /home/david/lms-frontend
+            else
+              cd /home/david/lms-frontend
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
+            cd /home/david/lms-frontend
+
+            # Cria o .env
+            echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env
+            echo "NODE_ENV=production" >> .env
+
+            # Para containers antigos do projeto (evita conflito de nomes)
+            docker compose down --remove-orphans
+
+            # Build e sobe o container
+            docker compose build --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            docker compose up -d --force-recreate
+          EOF
