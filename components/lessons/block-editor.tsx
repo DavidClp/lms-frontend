@@ -19,8 +19,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { RichTextEditor } from '@/components/lessons/rich-text-editor'
 import {
   Select,
   SelectContent,
@@ -32,6 +32,7 @@ import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, I
 import type { ContentBlock, BlockType } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { Textarea } from '../ui/textarea'
 
 interface BlockEditorProps {
   blocks: ContentBlock[]
@@ -252,11 +253,11 @@ function TextBlockEditor({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Textarea
+        <RichTextEditor
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder="Digite o conteúdo de texto..."
-          rows={4}
+          minHeight="160px"
         />
       </CardContent>
     </Card>

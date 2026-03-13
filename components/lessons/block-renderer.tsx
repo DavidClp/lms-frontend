@@ -1,14 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import DOMPurify from 'dompurify'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { ContentBlock, QuizBlock, ImagesBlock } from '@/types'
-import { Video, CheckSquare, FileText, HelpCircle, CheckCircle, XCircle, ImageIcon } from 'lucide-react'
+import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
+
+const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'u', 'a', 'span', 'ul', 'ol', 'li']
+const ALLOWED_ATTR = ['href', 'target', 'rel', 'style']
 
 interface BlockRendererProps {
   blocks: ContentBlock[]
@@ -33,15 +37,27 @@ export function BlockRenderer({ blocks }: BlockRendererProps) {
 }
 
 function TextBlockComponent({ value }: { value: string }) {
+  const isHtml = /<[a-z][\s\S]*>/i.test(value)
+  const sanitized = isHtml
+    ? DOMPurify.sanitize(value, { ALLOWED_TAGS, ALLOWED_ATTR })
+    : ''
+  const isPlainText = !isHtml || sanitized.replace(/<[^>]+>/g, '').trim() === value.trim()
+
+  // Visualização “editor desabilitado”: mesmo estilo da área de conteúdo do editor, sem bordas, só leitura
+  const editorContentClass =
+    'prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed min-h-[60px] px-3 py-2 rounded-lg [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_p]:block [&_p]:mb-4 [&_p:last-child]:mb-0 [&_li]:mb-1'
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start gap-3">
-          <FileText className="mt-1 h-5 w-5 shrink-0 text-primary" />
-          <p className="text-foreground leading-relaxed whitespace-pre-wrap">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="rounded-lg bg-muted/20 overflow-hidden">
+      {isPlainText ? (
+        <div className={cn(editorContentClass, 'whitespace-pre-wrap')}>{value}</div>
+      ) : sanitized ? (
+        <div
+          className={editorContentClass}
+          dangerouslySetInnerHTML={{ __html: sanitized }}
+        />
+      ) : null}
+    </div>
   )
 }
 

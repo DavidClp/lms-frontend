@@ -3,7 +3,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { modulesApi, lessonsApi, usersApi, progressApi } from '@/lib/api'
 import type { ModuleFormData, LessonFormData, UserFormData } from '@/types'
-import { toast } from 'sonner'
 
 // Modules hooks
 export function useModules() {
@@ -35,10 +34,6 @@ export function useCreateModule() {
     mutationFn: (data: ModuleFormData) => modulesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modules'] })
-      toast.success('Módulo criado com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao criar módulo')
     },
   })
 }
@@ -50,10 +45,6 @@ export function useUpdateModule() {
       modulesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modules'] })
-      toast.success('Módulo atualizado com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao atualizar módulo')
     },
   })
 }
@@ -64,10 +55,6 @@ export function useDeleteModule() {
     mutationFn: (id: string) => modulesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modules'] })
-      toast.success('Módulo excluído com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao excluir módulo')
     },
   })
 }
@@ -95,10 +82,6 @@ export function useCreateLesson() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lessons'] })
       queryClient.invalidateQueries({ queryKey: ['modules'] })
-      toast.success('Aula criada com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao criar aula')
     },
   })
 }
@@ -110,10 +93,6 @@ export function useUpdateLesson() {
       lessonsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lessons'] })
-      toast.success('Aula atualizada com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao atualizar aula')
     },
   })
 }
@@ -125,10 +104,6 @@ export function useDeleteLesson() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lessons'] })
       queryClient.invalidateQueries({ queryKey: ['modules'] })
-      toast.success('Aula excluída com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao excluir aula')
     },
   })
 }
@@ -155,10 +130,6 @@ export function useCreateUser() {
     mutationFn: (data: UserFormData) => usersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success('Usuário criado com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao criar usuário')
     },
   })
 }
@@ -170,10 +141,6 @@ export function useUpdateUser() {
       usersApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success('Usuário atualizado com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao atualizar usuário')
     },
   })
 }
@@ -184,10 +151,6 @@ export function useDeleteUser() {
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success('Usuário excluído com sucesso!')
-    },
-    onError: () => {
-      toast.error('Erro ao excluir usuário')
     },
   })
 }
@@ -212,10 +175,6 @@ export function useMarkProgress() {
       progressApi.markComplete(lessonId, completed),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progress'] })
-      toast.success('Progresso atualizado!')
-    },
-    onError: () => {
-      toast.error('Erro ao atualizar progresso')
     },
   })
 }

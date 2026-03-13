@@ -79,29 +79,28 @@ export default function AdminModulesPage() {
       <PageHeader
         title="Módulos"
         description="Gerencie os módulos do curso"
-        action={
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Módulo
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Módulo</DialogTitle>
-                <DialogDescription>
-                  Preencha os dados do novo módulo
-                </DialogDescription>
-              </DialogHeader>
-              <ModuleForm
-                onSubmit={handleCreate}
-                isLoading={createModule.isPending}
-              />
-            </DialogContent>
-          </Dialog>
-        }
-      />
+      >
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Módulo
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Módulo</DialogTitle>
+              <DialogDescription>
+                Preencha os dados do novo módulo
+              </DialogDescription>
+            </DialogHeader>
+            <ModuleForm
+              onSubmit={handleCreate}
+              isLoading={createModule.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
 
       {!modules || modules.length === 0 ? (
         <EmptyState

@@ -93,8 +93,8 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+      <div className="flex flex-col gap-6">
+        <Card>
           <CardHeader>
             <CardTitle>Informações</CardTitle>
             <CardDescription>Dados básicos da aula</CardDescription>
@@ -136,7 +136,7 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle>Conteúdo</CardTitle>
             <CardDescription>Adicione blocos de conteúdo à aula</CardDescription>
