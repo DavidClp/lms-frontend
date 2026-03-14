@@ -43,9 +43,11 @@ function TextBlockComponent({ value }: { value: string }) {
     : ''
   const isPlainText = !isHtml || sanitized.replace(/<[^>]+>/g, '').trim() === value.trim()
 
+  console.log("isPlainText", isPlainText)
+  console.log("sanitized", sanitized)
   // Visualização “editor desabilitado”: mesmo estilo da área de conteúdo do editor, sem bordas, só leitura
   const editorContentClass =
-    'prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed min-h-[60px] px-3 py-2 rounded-lg [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_p]:block [&_p]:mb-4 [&_p:last-child]:mb-0 [&_li]:mb-1'
+    'prose prose-sm dark:prose-invert max-w-none text-foreground  min-h-[60px] px-3 py-2 rounded-lg [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_p]:block [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li]:mb-1'
 
   return (
     <div className="rounded-lg bg-muted/20 overflow-hidden">

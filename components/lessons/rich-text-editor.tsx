@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
+import HardBreak from '@tiptap/extension-hard-break'
 import Link from '@tiptap/extension-link'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
@@ -113,6 +114,22 @@ const TEXT_COLORS = [
   { name: 'Roxo', value: '#9333ea' },
 ]
 
+// Enter = uma linha (br); Shift+Enter = novo parágrafo
+const CustomEnterHardBreak = Extension.create({
+  name: 'customEnterHardBreak',
+  addKeyboardShortcuts() {
+    return {
+      Enter: ({ editor }) => {
+        if (editor.isActive('listItem') || editor.isActive('bulletList') || editor.isActive('orderedList')) {
+          return false
+        }
+        return editor.commands.setHardBreak()
+      },
+      'Shift-Enter': () => this.editor.commands.splitBlock(),
+    }
+  },
+})
+
 interface RichTextEditorProps {
   value: string
   onChange: (html: string) => void
@@ -136,6 +153,8 @@ export function RichTextEditor({
       StarterKit.configure({
         heading: false,
       }),
+      HardBreak,
+      CustomEnterHardBreak,
       Underline,
       Link.configure({
         openOnClick: false,

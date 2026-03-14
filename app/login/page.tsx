@@ -92,23 +92,6 @@ export default function LoginPage() {
                 {isLoading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
-
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm font-medium text-center mb-3 flex items-center justify-center gap-2">
-                <BookOpen className="h-4 w-4" />
-                Credenciais de teste
-              </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center p-2 bg-background rounded">
-                  <span className="text-muted-foreground">Admin:</span>
-                  <code className="text-xs">admin@lms.com / admin123</code>
-                </div>
-                <div className="flex justify-between items-center p-2 bg-background rounded">
-                  <span className="text-muted-foreground">Aluno:</span>
-                  <code className="text-xs">aluno@lms.com / aluno123</code>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
