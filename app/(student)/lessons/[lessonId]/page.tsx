@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useState, useCallback } from 'react'
-import { useLesson, useModule, useUserProgress, useMarkLessonComplete } from '@/hooks/use-api'
+import { useLesson, useModule, useUserProgress, useMarkLessonComplete, useStudentModuleAccess } from '@/hooks/use-api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/layout/page-header'
@@ -9,7 +9,7 @@ import { BlockRenderer, type QuizResultItem } from '@/components/lessons/block-r
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, CheckCircle, Circle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Circle, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
@@ -18,9 +18,12 @@ import { progressApi } from '@/lib/api'
 export default function StudentLessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
   const { lessonId } = use(params)
   const { user } = useAuth()
-  const { data: lesson, isLoading } = useLesson(lessonId)
+  const { data: lesson, isLoading, isError } = useLesson(lessonId)
   const { data: module } = useModule(lesson?.moduleId || '')
   const { data: progress } = useUserProgress(user?.id || '')
+  const { data: moduleAccessData } = useStudentModuleAccess(user?.id ?? '')
+  const allowedModuleIds = moduleAccessData?.moduleIds ?? []
+  const isLocked = !!lesson && !allowedModuleIds.includes(lesson.moduleId)
   const markComplete = useMarkLessonComplete()
   const queryClient = useQueryClient()
 
@@ -88,10 +91,36 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
   if (!lesson) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Aula não encontrada</p>
+        <p className="text-muted-foreground">{isError ? 'Aula bloqueada ou não encontrada.' : 'Aula não encontrada'}</p>
         <Button asChild className="mt-4">
-          <Link href="/modules">Voltar</Link>
+          <Link href="/modules">Voltar aos módulos</Link>
         </Button>
+      </div>
+    )
+  }
+
+  if (isLocked) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/modules">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <Card>
+          <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground mb-4">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h3 className="text-lg font-semibold mb-1">Aula bloqueada</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Você não tem acesso ao módulo desta aula. Entre em contato com o professor para liberação.
+            </p>
+            <Button asChild>
+              <Link href="/modules">Voltar aos módulos</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }

@@ -11,6 +11,12 @@ import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLin
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'u', 'a', 'span', 'ul', 'ol', 'li']
 const ALLOWED_ATTR = ['href', 'target', 'rel', 'style']
@@ -276,34 +282,67 @@ function ChecklistBlockComponent({ title, items }: { title?: string; items: stri
 }
 
 function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+
   if (!block.imageIds || block.imageIds.length === 0) return null
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
-          <ImageIcon className="h-4 w-4 text-primary" />
-          <span>Imagens</span>
-        </div>
-        <div className={cn(
-          'grid gap-3',
-          block.imageIds.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
-        )}>
-          {block.imageIds.map((id) => (
-            <div key={id} className="overflow-hidden rounded-lg border bg-muted">
-              <img
-                src={imagesApi.getUrl(id)}
-                alt={block.caption ?? ''}
-                className="w-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-        {block.caption && (
-          <p className="mt-2 text-center text-sm text-muted-foreground italic">{block.caption}</p>
-        )}
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+            <ImageIcon className="h-4 w-4 text-primary" />
+            <span>Imagens</span>
+          </div>
+          <div className={cn(
+            'grid gap-3',
+            block.imageIds.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+          )}>
+            {block.imageIds.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedImageId(id)}
+                className="overflow-hidden rounded-lg border bg-muted text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
+                <img
+                  src={imagesApi.getUrl(id)}
+                  alt={block.caption ?? ''}
+                  className="w-full h-40 object-cover object-center cursor-pointer"
+                />
+              </button>
+            ))}
+          </div>
+          {block.caption && (
+            <p className="mt-2 text-center text-sm text-muted-foreground italic">{block.caption}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={selectedImageId !== null} onOpenChange={(open) => !open && setSelectedImageId(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col gap-4 p-4">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Imagem em tamanho maior</DialogTitle>
+          </DialogHeader>
+          {selectedImageId && (
+            <>
+              <div className="flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
+                <img
+                  src={imagesApi.getUrl(selectedImageId)}
+                  alt={block.caption ?? 'Imagem ampliada'}
+                  className="max-w-full max-h-[70vh] w-auto h-auto object-contain"
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setSelectedImageId(null)}>
+                  Sair
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

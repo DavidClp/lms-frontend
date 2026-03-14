@@ -169,9 +169,20 @@ export const lessonsApi = {
 }
 
 // Users API
+export interface StudentModuleAccessResponse {
+  moduleIds: string[]
+}
+
 export const usersApi = {
   getAll: () => fetchApi<User[]>('/users'),
   getById: (id: string) => fetchApi<User>(`/users/${id}`),
+  getStudentModuleAccess: (userId: string) =>
+    fetchApi<StudentModuleAccessResponse>(`/users/${userId}/module-access`),
+  updateStudentModuleAccess: (userId: string, moduleIds: string[]) =>
+    fetchApi<StudentModuleAccessResponse>(`/users/${userId}/module-access`, {
+      method: 'PUT',
+      body: JSON.stringify({ moduleIds }),
+    }),
   create: (data: UserFormData) =>
     fetchApi<User>('/users', {
       method: 'POST',

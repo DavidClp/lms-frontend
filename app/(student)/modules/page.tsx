@@ -1,6 +1,6 @@
 'use client'
 
-import { useModules, useLessons, useUserProgress } from '@/hooks/use-api'
+import { useModules, useLessons, useUserProgress, useStudentModuleAccess } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/layout/page-header'
 import { ModuleCard } from '@/components/modules/module-card'
@@ -13,6 +13,8 @@ export default function StudentModulesPage() {
   const { data: modules, isLoading } = useModules()
   const { data: lessons } = useLessons()
   const { data: progress } = useUserProgress(user?.id || '')
+  const { data: moduleAccessData } = useStudentModuleAccess(user?.id ?? '')
+  const allowedModuleIds = moduleAccessData?.moduleIds ?? []
 
   if (isLoading) {
     return (
@@ -38,18 +40,13 @@ export default function StudentModulesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {modules.sort((a, b) => a.order - b.order).map((module) => {
-            const moduleLessons = lessons?.filter(l => l.moduleId === module.id) || []
-            const completedLessons = progress?.filter(p => 
-              p.completed && moduleLessons.some(l => l.id === p.lessonId)
-            ).length || 0
-
+            const isLocked = !allowedModuleIds.includes(module.id)
             return (
               <ModuleCard
                 key={module.id}
                 module={module}
-             //   lessonsCount={moduleLessons.length}
-             //   completedCount={completedLessons}
                 href={`/modules/${module.id}`}
+                locked={isLocked}
               />
             )
           })}

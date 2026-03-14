@@ -1,14 +1,14 @@
 'use client'
 
 import { use } from 'react'
-import { useModule, useModuleLessons, useUserProgress } from '@/hooks/use-api'
+import { useModule, useModuleLessons, useUserProgress, useStudentModuleAccess } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/layout/page-header'
 import { LessonList } from '@/components/lessons/lesson-list'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, BookOpen } from 'lucide-react'
+import { ArrowLeft, BookOpen, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -16,7 +16,10 @@ export default function StudentModuleDetailPage({ params }: { params: Promise<{ 
   const { moduleId } = use(params)
   const { user } = useAuth()
   const { data: module, isLoading } = useModule(moduleId)
-  const { data: lessons } = useModuleLessons(moduleId)
+  const { data: moduleAccessData } = useStudentModuleAccess(user?.id ?? '')
+  const allowedModuleIds = moduleAccessData?.moduleIds ?? []
+  const isLocked = !allowedModuleIds.includes(moduleId)
+  const { data: lessons } = useModuleLessons(moduleId, { enabled: !isLocked })
   const { data: progress } = useUserProgress(user?.id || '')
 
   const completedLessonIds = progress?.filter(p => p.completed).map(p => p.lessonId) || []
@@ -39,6 +42,38 @@ export default function StudentModuleDetailPage({ params }: { params: Promise<{ 
         <Button asChild className="mt-4">
           <Link href="/modules">Voltar</Link>
         </Button>
+      </div>
+    )
+  }
+
+  if (isLocked) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/modules">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <PageHeader
+            title={module.title}
+            description={module.description}
+          />
+        </div>
+        <Card>
+          <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground mb-4">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h3 className="text-lg font-semibold mb-1">Módulo bloqueado</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Você ainda não tem acesso a este módulo. Entre em contato com o professor para liberação.
+            </p>
+            <Button asChild>
+              <Link href="/modules">Voltar aos módulos</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }

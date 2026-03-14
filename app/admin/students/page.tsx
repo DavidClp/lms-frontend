@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-api'
+import { useState, useEffect } from 'react'
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useModules, useStudentModuleAccess, useUpdateStudentModuleAccess } from '@/hooks/use-api'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/layout/empty-state'
 import { UserForm } from '@/components/users/user-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -48,16 +51,38 @@ import type { User } from '@/types'
 
 export default function AdminStudentsPage() {
   const { data: users, isLoading } = useUsers()
+  const { data: modules } = useModules()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
+  const updateModuleAccess = useUpdateStudentModuleAccess()
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [userToEdit, setUserToEdit] = useState<User | null>(null)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null)
 
+  const { data: moduleAccessData } = useStudentModuleAccess(userToEdit?.id ?? '')
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editPassword, setEditPassword] = useState('')
+  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([])
+
   const students = users?.filter(u => u.role === 'STUDENT') || []
+
+  useEffect(() => {
+    if (userToEdit) {
+      setEditName(userToEdit.name)
+      setEditEmail(userToEdit.email)
+      setEditPassword('')
+    }
+  }, [userToEdit])
+
+  useEffect(() => {
+    if (moduleAccessData?.moduleIds) {
+      setSelectedModuleIds(moduleAccessData.moduleIds)
+    }
+  }, [moduleAccessData])
 
   const handleCreate = async (data: Partial<User>) => {
     try {
@@ -69,15 +94,22 @@ export default function AdminStudentsPage() {
     }
   }
 
-  const handleUpdate = async (data: Partial<User>) => {
+  const handleUpdate = async (data: Partial<User> & { password?: string }) => {
     if (!userToEdit) return
     try {
       await updateUser.mutateAsync({ id: userToEdit.id, data })
+      await updateModuleAccess.mutateAsync({ userId: userToEdit.id, moduleIds: selectedModuleIds })
       toast.success('Aluno atualizado com sucesso!')
       setUserToEdit(null)
     } catch {
       toast.error('Erro ao atualizar aluno')
     }
+  }
+
+  const toggleModule = (moduleId: string, checked: boolean) => {
+    setSelectedModuleIds((prev) =>
+      checked ? [...prev, moduleId] : prev.filter((id) => id !== moduleId)
+    )
   }
 
   const handleDelete = async () => {
@@ -225,20 +257,99 @@ export default function AdminStudentsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!userToEdit} onOpenChange={() => setUserToEdit(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Aluno</DialogTitle>
             <DialogDescription>
-              Atualize os dados do aluno
+              Atualize os dados do aluno e os módulos liberados
             </DialogDescription>
           </DialogHeader>
           {userToEdit && (
-            <UserForm
-              defaultValues={userToEdit}
-              onSubmit={handleUpdate}
-              isLoading={updateUser.isPending}
-              submitLabel="Salvar"
-            />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const data: Partial<User> & { password?: string } = { name: editName, email: editEmail }
+                if (editPassword) data.password = editPassword
+                handleUpdate(data)
+              }}
+              className="space-y-6"
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Nome completo"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-password">Nova Senha (deixe em branco para manter)</Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Nova senha"
+                    minLength={6}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label>Módulos liberados</Label>
+                <p className="text-sm text-muted-foreground">
+                  Selecione os módulos que este aluno pode acessar. Módulos não marcados aparecerão bloqueados.
+                </p>
+                <div className="grid gap-2 max-h-48 overflow-y-auto rounded-md border p-3">
+                  {modules
+                    ?.slice()
+                    .sort((a, b) => a.order - b.order)
+                    .map((module) => (
+                      <div
+                        key={module.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`module-${module.id}`}
+                          checked={selectedModuleIds.includes(module.id)}
+                          onCheckedChange={(checked) =>
+                            toggleModule(module.id, checked === true)
+                          }
+                        />
+                        <label
+                          htmlFor={`module-${module.id}`}
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          {module.order}. {module.title}
+                        </label>
+                      </div>
+                    ))}
+                  {(!modules || modules.length === 0) && (
+                    <p className="text-sm text-muted-foreground">Nenhum módulo cadastrado</p>
+                  )}
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={updateUser.isPending || updateModuleAccess.isPending}
+              >
+                {updateUser.isPending || updateModuleAccess.isPending ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </form>
           )}
         </DialogContent>
       </Dialog>

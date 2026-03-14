@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import type { Module } from '@/types'
-import { BookOpen, ArrowRight, Edit, Trash2 } from 'lucide-react'
+import { BookOpen, ArrowRight, Edit, Trash2, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ModuleCardProps {
@@ -14,6 +14,7 @@ interface ModuleCardProps {
   href: string
   progress?: number
   showActions?: boolean
+  locked?: boolean
   onEdit?: () => void
   onDelete?: () => void
 }
@@ -23,17 +24,18 @@ export function ModuleCard({
   href,
   progress,
   showActions,
+  locked = false,
   onEdit,
   onDelete,
 }: ModuleCardProps) {
   return (
-    <Card className="group relative overflow-hidden transition-all hover:shadow-md">
-      <div className="absolute inset-x-0 top-0 h-1 bg-primary opacity-0 transition-opacity group-hover:opacity-100" />
+    <Card className={cn('group relative overflow-hidden transition-all hover:shadow-md', locked && 'opacity-90')}>
+      <div className={cn('absolute inset-x-0 top-0 h-1 transition-opacity group-hover:opacity-100', locked ? 'bg-muted' : 'bg-primary opacity-0')} />
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <BookOpen className="h-5 w-5" />
+            <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', locked ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary')}>
+              {locked ? <Lock className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
             </div>
             <Badge variant="secondary" className="text-xs">
               Módulo {module.order}
@@ -83,12 +85,19 @@ export function ModuleCard({
           <span className="text-sm text-muted-foreground">
             {module.lessonsCount || 0} aulas
           </span>
-          <Button asChild variant="ghost" size="sm" className="gap-1">
-            <Link href={href}>
-              Acessar
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+          {locked ? (
+            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Lock className="h-4 w-4" />
+              Módulo bloqueado
+            </span>
+          ) : (
+            <Button asChild variant="ghost" size="sm" className="gap-1">
+              <Link href={href}>
+                Acessar
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

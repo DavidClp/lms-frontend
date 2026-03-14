@@ -20,11 +20,12 @@ export function useModule(id: string) {
   })
 }
 
-export function useModuleLessons(moduleId: string) {
+export function useModuleLessons(moduleId: string, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled !== false && !!moduleId
   return useQuery({
     queryKey: ['modules', moduleId, 'lessons'],
     queryFn: () => modulesApi.getLessons(moduleId),
-    enabled: !!moduleId,
+    enabled,
   })
 }
 
@@ -158,6 +159,27 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+}
+
+// Student module access hooks
+export function useStudentModuleAccess(userId: string) {
+  return useQuery({
+    queryKey: ['users', userId, 'module-access'],
+    queryFn: () => usersApi.getStudentModuleAccess(userId),
+    enabled: !!userId,
+  })
+}
+
+export function useUpdateStudentModuleAccess() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, moduleIds }: { userId: string; moduleIds: string[] }) =>
+      usersApi.updateStudentModuleAccess(userId, moduleIds),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users', variables.userId, 'module-access'] })
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
   })
