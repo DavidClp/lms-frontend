@@ -303,12 +303,12 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
                 key={id}
                 type="button"
                 onClick={() => setSelectedImageId(id)}
-                className="overflow-hidden rounded-lg border bg-muted text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 <img
                   src={imagesApi.getUrl(id)}
                   alt={block.caption ?? ''}
-                  className="w-full h-40 object-cover object-center cursor-pointer"
+                  className="max-h-100 object-cover object-center cursor-pointer"
                 />
               </button>
             ))}
