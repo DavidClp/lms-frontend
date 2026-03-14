@@ -74,14 +74,19 @@ const introContent: ContentBlock[] = [
   },
   {
     type: 'QUIZ',
-    question: 'O que é hardware?',
-    options: [
-      { id: 'a', text: 'Programas de computador' },
-      { id: 'b', text: 'Partes físicas do computador' },
-      { id: 'c', text: 'Tipo de vírus' },
-      { id: 'd', text: 'Um jogo de computador' },
+    questions: [
+      {
+        id: 'q1',
+        question: 'O que é hardware?',
+        options: [
+          { id: 'a', text: 'Programas de computador' },
+          { id: 'b', text: 'Partes físicas do computador' },
+          { id: 'c', text: 'Tipo de vírus' },
+          { id: 'd', text: 'Um jogo de computador' },
+        ],
+        correctOptionId: 'b',
+      },
     ],
-    correctOptionId: 'b',
   },
 ]
 

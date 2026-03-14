@@ -30,7 +30,7 @@ export interface Lesson {
   updatedAt?: string
 }
 
-export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ' | 'IMAGES'
+export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ' | 'IMAGES' | 'OPEN_QUESTION'
 
 export interface TextBlock {
   type: 'TEXT'
@@ -54,11 +54,16 @@ export interface QuizOption {
   text: string
 }
 
-export interface QuizBlock {
-  type: 'QUIZ'
+export interface QuizQuestion {
+  id: string
   question: string
   options: QuizOption[]
   correctOptionId: string
+}
+
+export interface QuizBlock {
+  type: 'QUIZ'
+  questions: QuizQuestion[]
 }
 
 export interface ImagesBlock {
@@ -67,7 +72,19 @@ export interface ImagesBlock {
   caption?: string
 }
 
-export type ContentBlock = TextBlock | VideoBlock | ActivityChecklistBlock | QuizBlock | ImagesBlock
+/** Atividade com pergunta e campo de texto para o aluno responder digitando */
+export interface OpenQuestionBlock {
+  type: 'OPEN_QUESTION'
+  question: string
+}
+
+export type ContentBlock = TextBlock | VideoBlock | ActivityChecklistBlock | QuizBlock | ImagesBlock | OpenQuestionBlock
+
+/** Resultados do quiz por bloco (índice): lista de acerto/erro por pergunta */
+export type QuizResultsByBlock = Record<string, { questionId: string; correct: boolean }[]>
+
+/** Respostas de atividade (pergunta em texto) por índice do bloco */
+export type OpenQuestionAnswersByBlock = Record<string, string>
 
 export interface Progress {
   id: string
@@ -78,6 +95,21 @@ export interface Progress {
   userId: string
   completed: boolean
   completedAt?: string
+  quizResults?: QuizResultsByBlock
+  openQuestionAnswers?: OpenQuestionAnswersByBlock
+}
+
+export interface LessonQuizResultsStudent {
+  userId: string
+  userName: string
+  quizResults: QuizResultsByBlock
+}
+
+export interface LessonQuizResultsResponse {
+  lessonId: string
+  lessonTitle: string
+  quizBlockIndexes: number[]
+  students: LessonQuizResultsStudent[]
 }
 
 export interface ModuleProgress {

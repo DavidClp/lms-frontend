@@ -47,6 +47,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
     "@tiptap/extension-color": "^2.10.0",
+    "@tiptap/extension-hard-break": "^2.10.0",
     "@tiptap/extension-link": "^2.10.0",
     "@tiptap/extension-text-align": "^2.10.0",
     "@tiptap/extension-text-style": "^2.10.0",

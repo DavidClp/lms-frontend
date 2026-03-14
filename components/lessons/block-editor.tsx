@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2 } from 'lucide-react'
-import type { ContentBlock, BlockType } from '@/types'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine } from 'lucide-react'
+import type { ContentBlock, BlockType, QuizBlock, QuizQuestion } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Textarea } from '../ui/textarea'
@@ -65,16 +65,23 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
       newBlock = { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
     } else if (addingType === 'IMAGES') {
       newBlock = { type: 'IMAGES', imageIds: [], caption: '' }
+    } else if (addingType === 'OPEN_QUESTION') {
+      newBlock = { type: 'OPEN_QUESTION', question: '' }
     } else {
       newBlock = {
         type: 'QUIZ',
-        question: '',
-        options: [
-          { id: 'a', text: '' },
-          { id: 'b', text: '' },
+        questions: [
+          {
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`,
+            question: '',
+            options: [
+              { id: 'a', text: '' },
+              { id: 'b', text: '' },
+            ],
+            correctOptionId: 'a',
+          },
         ],
-        correctOptionId: 'a',
-      }
+      } as QuizBlock
     }
     onChange([...blocks, newBlock])
     setAddingType('')
@@ -133,11 +140,9 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
               )}
               {block.type === 'QUIZ' && (
                 <QuizBlockEditor
-                  question={block.question}
-                  options={block.options}
-                  correctOptionId={block.correctOptionId}
-                  onChange={(question, options, correctOptionId) =>
-                    updateBlock(index, { type: 'QUIZ', question, options, correctOptionId })
+                  block={block}
+                  onChange={(questions) =>
+                    updateBlock(index, { type: 'QUIZ', questions })
                   }
                 />
               )}
@@ -147,6 +152,14 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   caption={block.caption}
                   onChange={(imageIds, caption) =>
                     updateBlock(index, { type: 'IMAGES', imageIds, caption })
+                  }
+                />
+              )}
+              {block.type === 'OPEN_QUESTION' && (
+                <OpenQuestionBlockEditor
+                  question={block.question}
+                  onChange={(question) =>
+                    updateBlock(index, { type: 'OPEN_QUESTION', question })
                   }
                 />
               )}
@@ -184,6 +197,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
             <SelectItem value="IMAGES">
               <div className="flex items-center gap-2">
                 <ImageIcon className="h-4 w-4" /> Imagens
+              </div>
+            </SelectItem>
+            <SelectItem value="OPEN_QUESTION">
+              <div className="flex items-center gap-2">
+                <PenLine className="h-4 w-4" /> Pergunta (resposta em texto)
               </div>
             </SelectItem>
           </SelectContent>
@@ -295,6 +313,35 @@ function VideoBlockEditor({
             value={url}
             onChange={(e) => onChange(e.target.value, title)}
             placeholder="https://www.youtube.com/watch?v=..."
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function OpenQuestionBlockEditor({
+  question,
+  onChange,
+}: {
+  question: string
+  onChange: (question: string) => void
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <PenLine className="h-4 w-4" /> Pergunta (resposta em texto)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <Label>Pergunta ou enunciado</Label>
+          <Textarea
+            value={question}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Digite a pergunta que o aluno deve responder..."
+            rows={3}
           />
         </div>
       </CardContent>
@@ -463,7 +510,91 @@ function ImageBlockEditor({
   )
 }
 
+function getQuizQuestions(block: QuizBlock): QuizQuestion[] {
+  if (Array.isArray(block.questions) && block.questions.length > 0) return block.questions
+  const legacy = block as QuizBlock & { question?: string; options?: QuizQuestion['options']; correctOptionId?: string }
+  return [{
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`,
+    question: legacy.question ?? '',
+    options: legacy.options ?? [],
+    correctOptionId: legacy.correctOptionId ?? '',
+  }]
+}
+
 function QuizBlockEditor({
+  block,
+  onChange,
+}: {
+  block: QuizBlock
+  onChange: (questions: QuizQuestion[]) => void
+}) {
+  const questions = getQuizQuestions(block)
+
+  const updateQuestion = (questionIndex: number, updated: QuizQuestion) => {
+    const next = [...questions]
+    next[questionIndex] = updated
+    onChange(next)
+  }
+
+  const addQuestion = () => {
+    onChange([
+      ...questions,
+      {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`,
+        question: '',
+        options: [{ id: 'a', text: '' }, { id: 'b', text: '' }],
+        correctOptionId: 'a',
+      },
+    ])
+  }
+
+  const removeQuestion = (questionIndex: number) => {
+    if (questions.length <= 1) return
+    onChange(questions.filter((_, i) => i !== questionIndex))
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <HelpCircle className="h-4 w-4" /> Quiz
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {questions.map((q, qIndex) => (
+          <div key={q.id} className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Pergunta {qIndex + 1}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => removeQuestion(qIndex)}
+                disabled={questions.length <= 1}
+                title={questions.length <= 1 ? 'O quiz precisa de pelo menos uma pergunta' : 'Remover pergunta'}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <SingleQuestionEditor
+              question={q.question}
+              options={q.options}
+              correctOptionId={q.correctOptionId}
+              onChange={(question, options, correctOptionId) =>
+                updateQuestion(qIndex, { ...q, question, options, correctOptionId })
+              }
+            />
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addQuestion}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar pergunta
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SingleQuestionEditor({
   question,
   options,
   correctOptionId,
@@ -472,11 +603,7 @@ function QuizBlockEditor({
   question: string
   options: { id: string; text: string }[]
   correctOptionId: string
-  onChange: (
-    question: string,
-    options: { id: string; text: string }[],
-    correctOptionId: string
-  ) => void
+  onChange: (question: string, options: { id: string; text: string }[], correctOptionId: string) => void
 }) {
   const updateOption = (index: number, text: string) => {
     const next = [...options]
@@ -485,7 +612,7 @@ function QuizBlockEditor({
   }
 
   const addOption = () => {
-    const id = String.fromCharCode(97 + options.length) // a, b, c, ...
+    const id = String.fromCharCode(97 + options.length)
     onChange(question, [...options, { id, text: '' }], correctOptionId)
   }
 
@@ -496,67 +623,60 @@ function QuizBlockEditor({
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <HelpCircle className="h-4 w-4" /> Quiz
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1">
-          <Label>Pergunta</Label>
-          <Textarea
-            value={question}
-            onChange={(e) => onChange(e.target.value, options, correctOptionId)}
-            placeholder="Digite a pergunta..."
-            rows={2}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Opções</Label>
-          {options.map((option, i) => (
-            <div key={option.id} className="flex items-center gap-2">
-              <span className="w-6 shrink-0 text-center text-sm font-medium text-muted-foreground uppercase">
-                {option.id}
-              </span>
-              <Input
-                value={option.text}
-                onChange={(e) => updateOption(i, e.target.value)}
-                placeholder={`Opção ${option.id.toUpperCase()}`}
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn('shrink-0', options.length <= 2 && 'invisible')}
-                onClick={() => removeOption(i)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button variant="outline" size="sm" onClick={addOption} disabled={options.length >= 6}>
-            <Plus className="h-4 w-4 mr-1" /> Adicionar opção
-          </Button>
-        </div>
-        <div className="space-y-1">
-          <Label>Resposta correta</Label>
-          <Select
-            value={correctOptionId}
-            onValueChange={(v) => onChange(question, options, v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.id.toUpperCase()} — {option.text || '(sem texto)'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <Label>Enunciado</Label>
+        <Textarea
+          value={question}
+          onChange={(e) => onChange(e.target.value, options, correctOptionId)}
+          placeholder="Digite a pergunta..."
+          rows={2}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Opções</Label>
+        {options.map((option, i) => (
+          <div key={option.id} className="flex items-center gap-2">
+            <span className="w-6 shrink-0 text-center text-sm font-medium text-muted-foreground uppercase">
+              {option.id}
+            </span>
+            <Input
+              value={option.text}
+              onChange={(e) => updateOption(i, e.target.value)}
+              placeholder={`Opção ${option.id.toUpperCase()}`}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('shrink-0', options.length <= 2 && 'invisible')}
+              onClick={() => removeOption(i)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={addOption} disabled={options.length >= 6}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar opção
+        </Button>
+      </div>
+      <div className="space-y-1">
+        <Label>Resposta correta</Label>
+        <Select
+          value={correctOptionId}
+          onValueChange={(v) => onChange(question, options, v)}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.id.toUpperCase()} — {option.text || '(sem texto)'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   )
 }

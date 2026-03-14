@@ -75,6 +75,14 @@ export function useLesson(id: string) {
   })
 }
 
+export function useLessonQuizResults(lessonId: string) {
+  return useQuery({
+    queryKey: ['lessons', lessonId, 'quiz-results'],
+    queryFn: () => lessonsApi.getQuizResults(lessonId),
+    enabled: !!lessonId,
+  })
+}
+
 export function useCreateLesson() {
   const queryClient = useQueryClient()
   return useMutation({

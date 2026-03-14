@@ -8,6 +8,7 @@ import type {
   ModuleFormData,
   LessonFormData,
   UserFormData,
+  LessonQuizResultsResponse,
 } from '@/types'
 import {
   mockUsers,
@@ -149,6 +150,8 @@ export const modulesApi = {
 export const lessonsApi = {
   getAll: () => fetchApi<Lesson[]>('/lessons'),
   getById: (id: string) => fetchApi<Lesson>(`/lessons/${id}`),
+  getQuizResults: (id: string) =>
+    fetchApi<LessonQuizResultsResponse>(`/lessons/${id}/quiz-results`),
   create: (data: LessonFormData) =>
     fetchApi<Lesson>('/lessons', {
       method: 'POST',
@@ -216,5 +219,19 @@ export const progressApi = {
     fetchApi<Progress>('/progress', {
       method: 'POST',
       body: JSON.stringify({ lessonId, completed }),
+    }),
+  saveQuizResults: (
+    lessonId: string,
+    blockIndex: number,
+    results: { questionId: string; correct: boolean }[]
+  ) =>
+    fetchApi<Progress>('/progress/quiz', {
+      method: 'POST',
+      body: JSON.stringify({ lessonId, blockIndex, results }),
+    }),
+  saveOpenQuestionAnswer: (lessonId: string, blockIndex: number, answer: string) =>
+    fetchApi<Progress>('/progress/open-question', {
+      method: 'POST',
+      body: JSON.stringify({ lessonId, blockIndex, answer }),
     }),
 }
