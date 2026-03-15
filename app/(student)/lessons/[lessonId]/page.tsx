@@ -67,9 +67,10 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
     (blockIndex: number, results: QuizResultItem[]) => {
       progressApi
         .saveQuizResults(lessonId, blockIndex, results)
+        .then(() => queryClient.invalidateQueries({ queryKey: ['progress'] }))
         .catch(() => { /* histórico salvo em segundo plano; não bloquear o aluno */ })
     },
-    [lessonId]
+    [lessonId, queryClient]
   )
 
   const handleSaveOpenQuestion = useCallback(

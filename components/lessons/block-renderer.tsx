@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
-import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine } from 'lucide-react'
+import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
@@ -195,14 +195,14 @@ function VideoBlockComponent({ url, title }: { url: string; title?: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className='gap-0'>
+      <CardHeader className="pb-0">
         <CardTitle className="flex items-center gap-2 text-base">
           <Video className="h-5 w-5 text-primary" />
           {title || 'Vídeo'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-3 pb-3">
         <div className="aspect-video overflow-hidden rounded-lg bg-muted">
           {isYouTube ? (
             <div ref={containerRef} className="h-full w-full" />
@@ -302,8 +302,8 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
             <span>Imagens</span>
           </div> */}
           <div className={cn(
-            'flex flex-col gap-3 w-full',
-            block.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+            'flex gap-3 w-full',
+            block.imageLayout === 'row' ? 'flex-row flex-wrap' : 'flex-col'
           )}>
             {block.images.map((img) => {
               const hasCustomSize = img.width != null || img.height != null
@@ -459,7 +459,9 @@ function QuizBlockComponent({
   savedBlockResults?: QuizResultItem[]
 }) {
   const questions = getQuizQuestions(block)
-  const alreadyResponded = Array.isArray(savedBlockResults) && savedBlockResults.length > 0
+  const hasSavedResults = Array.isArray(savedBlockResults) && savedBlockResults.length > 0
+  const [isRetrying, setIsRetrying] = useState(false)
+  const alreadyResponded = hasSavedResults && !isRetrying
   const [perQuestion, setPerQuestion] = useState<Record<string, { selectedOption: string | null }>>(() => ({}))
   const [quizSubmitted, setQuizSubmitted] = useState(alreadyResponded)
 
@@ -483,12 +485,18 @@ function QuizBlockComponent({
   useEffect(() => {
     if (onQuizResult && quizSubmitted && !alreadyResponded && results.length > 0) {
       onQuizResult(blockIndex, results)
+      if (isRetrying) setIsRetrying(false)
     }
-  }, [blockIndex, onQuizResult, resultsSignature, quizSubmitted, alreadyResponded])
+  }, [blockIndex, onQuizResult, resultsSignature, quizSubmitted, alreadyResponded, isRetrying])
 
   const hasAnySelection = questions.some((q) => getSelected(q.id) !== null)
   const handleCorrigirTudo = () => {
     if (hasAnySelection && !alreadyResponded) setQuizSubmitted(true)
+  }
+  const handleTentarNovamente = () => {
+    setIsRetrying(true)
+    setPerQuestion({})
+    setQuizSubmitted(false)
   }
 
   return (
@@ -515,7 +523,13 @@ function QuizBlockComponent({
           )
         })}
         {alreadyResponded && (
-          <p className="text-sm text-muted-foreground">Você já respondeu este questionário.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-muted-foreground">Você já respondeu este questionário.</p>
+            <Button type="button" variant="outline" size="sm" onClick={handleTentarNovamente}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Tentar novamente
+            </Button>
+          </div>
         )}
         {!quizSubmitted && !alreadyResponded && (
           <div className="pt-2">

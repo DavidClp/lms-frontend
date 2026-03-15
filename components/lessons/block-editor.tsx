@@ -45,7 +45,7 @@ function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'TEXT') return { type: 'TEXT', value: '' }
   if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '' }
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
-  if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true }
+  if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true, imageLayout: 'column' }
   if (type === 'OPEN_QUESTION') return { type: 'OPEN_QUESTION', question: '' }
   return {
     type: 'QUIZ',
@@ -159,11 +159,15 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   <ImageBlockEditor
                     images={normalized.images}
                     cardWithBorder={normalized.cardWithBorder ?? true}
+                    imageLayout={normalized.imageLayout ?? 'column'}
                     onChange={(images) =>
-                      updateBlock(index, { type: 'IMAGES', images, cardWithBorder: current.cardWithBorder ?? true })
+                      updateBlock(index, { type: 'IMAGES', images, cardWithBorder: current.cardWithBorder ?? true, imageLayout: current.imageLayout ?? 'column' })
                     }
                     onCardWithBorderChange={(cardWithBorder) =>
-                      updateBlock(index, { type: 'IMAGES', images: normalized.images, cardWithBorder })
+                      updateBlock(index, { type: 'IMAGES', images: normalized.images, cardWithBorder, imageLayout: current.imageLayout ?? 'column' })
+                    }
+                    onImageLayoutChange={(imageLayout) =>
+                      updateBlock(index, { type: 'IMAGES', images: normalized.images, cardWithBorder: current.cardWithBorder ?? true, imageLayout })
                     }
                   />
                 )
@@ -490,13 +494,17 @@ const SIZE_CHANGE_THRESHOLD_PX = 8
 function ImageBlockEditor({
   images,
   cardWithBorder,
+  imageLayout,
   onChange,
   onCardWithBorderChange,
+  onImageLayoutChange,
 }: {
   images: ImageWithCaption[]
   cardWithBorder: boolean
+  imageLayout: 'column' | 'row'
   onChange: (images: ImageWithCaption[]) => void
   onCardWithBorderChange: (cardWithBorder: boolean) => void
+  onImageLayoutChange: (imageLayout: 'column' | 'row') => void
 }) {
   const [uploading, setUploading] = useState(false)
 
@@ -543,18 +551,33 @@ function ImageBlockEditor({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="card-with-border"
-            checked={cardWithBorder}
-            onCheckedChange={(checked) => onCardWithBorderChange(checked === true)}
-          />
-          <label
-            htmlFor="card-with-border"
-            className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Card com contorno
-          </label>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="card-with-border"
+              checked={cardWithBorder}
+              onCheckedChange={(checked) => onCardWithBorderChange(checked === true)}
+            />
+            <label
+              htmlFor="card-with-border"
+              className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Card com contorno
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="image-layout-row"
+              checked={imageLayout === 'row'}
+              onCheckedChange={(checked) => onImageLayoutChange(checked === true ? 'row' : 'column')}
+            />
+            <label
+              htmlFor="image-layout-row"
+              className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Exibir em linha (row)
+            </label>
+          </div>
         </div>
         {images.length > 0 && (
           <div className="space-y-4">
