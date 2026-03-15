@@ -179,6 +179,20 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
           </Card>
         )}
       </div>
+
+      <Button
+        size="icon"
+        onClick={handleSave}
+        disabled={updateLesson.isPending}
+        title="Salvar"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
+      >
+        {updateLesson.isPending ? (
+          <Spinner className="h-6 w-6" />
+        ) : (
+          <Save className="h-6 w-6" />
+        )}
+      </Button>
     </div>
   )
 }
