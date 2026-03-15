@@ -9,7 +9,7 @@ import { BlockRenderer, type QuizResultItem } from '@/components/lessons/block-r
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, CheckCircle, Circle, Lock } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Circle, Lock, ZoomIn, ZoomOut  } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
@@ -28,6 +28,10 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
   const queryClient = useQueryClient()
 
   const [checklistState, setChecklistState] = useState<Record<string, boolean[]>>({})
+  const [lessonZoom, setLessonZoom] = useState(1)
+  const MIN_ZOOM = 0.8
+  const MAX_ZOOM = 2
+  const ZOOM_STEP = 0.2
 
   const isCompleted = progress?.some(p => p.lessonId === lessonId && p.completed) || false
 
@@ -53,7 +57,8 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
     if (!user) return
     try {
       await markComplete.mutateAsync({
-        userId: user.id,
+        //@ts-ignore
+        userId: user?.id || '',
         lessonId,
         completed: true
       })
@@ -150,34 +155,55 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-6 space-y-6">
-         {/*  {lesson.content?.map((block, index) => (
-            <BlockRenderer
-              key={index}
-              blocks={block}
-              checklistState={checklistState[index] || []}
-              onChecklistChange={(newState) => {
-                setChecklistState(prev => ({ ...prev, [index]: newState }))
-              }}
-            />
-          ))} */}
+      <div className="relative">
+        <div
+          className="origin-top"
+          style={{ zoom: lessonZoom } as React.CSSProperties}
+        >
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              <BlockRenderer
+                blocks={lesson.content}
+                onQuizResult={handleQuizResult}
+                savedOpenAnswers={savedOpenAnswers}
+                onSaveOpenQuestion={handleSaveOpenQuestion}
+                savedQuizResults={savedQuizResults}
+              />
 
-          <BlockRenderer
-              blocks={lesson.content}
-              onQuizResult={handleQuizResult}
-              savedOpenAnswers={savedOpenAnswers}
-              onSaveOpenQuestion={handleSaveOpenQuestion}
-              savedQuizResults={savedQuizResults}
-            />
+              {(!lesson.content || lesson.content.length === 0) && (
+                <p className="text-muted-foreground text-center py-8">
+                  Esta aula ainda não possui conteúdo
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-          {(!lesson.content || lesson.content.length === 0) && (
-            <p className="text-muted-foreground text-center py-8">
-              Esta aula ainda não possui conteúdo
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        <div className="fixed bottom-3 right-3 flex flex-col gap-1 rounded-lg border bg-background/95 p-1 shadow-lg z-50">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setLessonZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}
+            disabled={lessonZoom >= MAX_ZOOM}
+            title="Aumentar tamanho"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setLessonZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}
+            disabled={lessonZoom <= MIN_ZOOM}
+            title="Diminuir tamanho"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
       {!isCompleted && (
         <div className="flex justify-center">

@@ -365,17 +365,17 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
       </Card>
 
       <Dialog open={selectedImageId !== null} onOpenChange={(open) => !open && setSelectedImageId(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col gap-4 p-4">
+        <DialogContent className="max-w-6xl max-h-[95vh] flex flex-col gap-4 p-4">
           <DialogHeader className="sr-only">
             <DialogTitle>Imagem em tamanho maior</DialogTitle>
           </DialogHeader>
           {selectedImageId && (
             <>
-              <div className="flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
+              <div className="flex-1 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden min-h-[60vh]">
                 <img
                   src={imagesApi.getUrl(selectedImageId)}
                   alt={selectedImage?.caption ?? 'Imagem ampliada'}
-                  className="max-w-full max-h-[70vh] w-auto h-auto object-contain"
+                  className="max-w-full max-h-[85vh] w-auto h-auto object-contain"
                 />
               </div>
               {selectedImage?.caption && (
