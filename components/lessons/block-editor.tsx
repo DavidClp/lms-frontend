@@ -473,13 +473,13 @@ function ChecklistBlockEditor({
   )
 }
 
-const DEFAULT_WIDTH_PCT = 50
-const DEFAULT_HEIGHT_PCT = 40
-const MIN_PCT = 10
-const MAX_PCT = 100
+const DEFAULT_WIDTH_PX = 400
+const DEFAULT_HEIGHT_PX = 300
+const MIN_PX = 80
+const MAX_PX = 2000
 const RESIZE_DEBOUNCE_MS = 150
-/** Só persiste tamanho se a diferença for maior que isso (evita loop de encolher). */
-const SIZE_CHANGE_THRESHOLD_PCT = 2
+/** Só persiste tamanho se a diferença for maior que isso em px (evita loop). */
+const SIZE_CHANGE_THRESHOLD_PX = 8
 
 function ImageBlockEditor({
   images,
@@ -489,7 +489,6 @@ function ImageBlockEditor({
   onChange: (images: ImageWithCaption[]) => void
 }) {
   const [uploading, setUploading] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -516,9 +515,9 @@ function ImageBlockEditor({
   }
 
   const updateImageSize = useCallback(
-    (id: string, width: number, height: number) => {
-      const w = Math.min(MAX_PCT, Math.max(MIN_PCT, width))
-      const h = Math.min(MAX_PCT, Math.max(MIN_PCT, height))
+    (id: string, widthPx: number, heightPx: number) => {
+      const w = Math.min(MAX_PX, Math.max(MIN_PX, Math.round(widthPx)))
+      const h = Math.min(MAX_PX, Math.max(MIN_PX, Math.round(heightPx)))
       onChange(
         images.map((img) => (img.id === id ? { ...img, width: w, height: h } : img))
       )
@@ -535,15 +534,14 @@ function ImageBlockEditor({
       </CardHeader>
       <CardContent className="space-y-3">
         {images.length > 0 && (
-          <div ref={containerRef} className="space-y-4">
+          <div className="space-y-4">
             {images.map((img) => (
               <ResizableImageItem
                 key={img.id}
                 img={img}
-                containerRef={containerRef}
                 onRemove={() => removeImage(img.id)}
                 onCaptionChange={(caption) => updateCaption(img.id, caption)}
-                onSizeChange={(width, height) => updateImageSize(img.id, width, height)}
+                onSizeChange={(widthPx, heightPx) => updateImageSize(img.id, widthPx, heightPx)}
               />
             ))}
           </div>
@@ -576,16 +574,14 @@ function ImageBlockEditor({
 
 function ResizableImageItem({
   img,
-  containerRef,
   onRemove,
   onCaptionChange,
   onSizeChange,
 }: {
   img: ImageWithCaption
-  containerRef: React.RefObject<HTMLDivElement | null>
   onRemove: () => void
   onCaptionChange: (caption: string) => void
-  onSizeChange: (width: number, height: number) => void
+  onSizeChange: (widthPx: number, heightPx: number) => void
 }) {
   const resizableRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -593,8 +589,7 @@ function ResizableImageItem({
 
   useEffect(() => {
     const el = resizableRef.current
-    const container = containerRef.current
-    if (!el || !container) return
+    if (!el) return
 
     const handleResize = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -604,17 +599,15 @@ function ResizableImageItem({
           initialCallRef.current = false
           return
         }
-        const cw = container.offsetWidth
-        const ch = container.offsetHeight
-        if (cw <= 0 || ch <= 0) return
-        const wPct = Math.min(MAX_PCT, Math.max(MIN_PCT, (el.offsetWidth / cw) * 100))
-        const hPct = Math.min(MAX_PCT, Math.max(MIN_PCT, (el.offsetHeight / ch) * 100))
-        const currentW = img.width ?? DEFAULT_WIDTH_PCT
-        const currentH = img.height ?? DEFAULT_HEIGHT_PCT
-        const diffW = Math.abs(wPct - currentW)
-        const diffH = Math.abs(hPct - currentH)
-        if (diffW >= SIZE_CHANGE_THRESHOLD_PCT || diffH >= SIZE_CHANGE_THRESHOLD_PCT) {
-          onSizeChange(wPct, hPct)
+        const wPx = Math.round(el.offsetWidth)
+        const hPx = Math.round(el.offsetHeight)
+        if (wPx <= 0 || hPx <= 0) return
+        const currentW = img.width ?? DEFAULT_WIDTH_PX
+        const currentH = img.height ?? DEFAULT_HEIGHT_PX
+        const diffW = Math.abs(wPx - currentW)
+        const diffH = Math.abs(hPx - currentH)
+        if (diffW >= SIZE_CHANGE_THRESHOLD_PX || diffH >= SIZE_CHANGE_THRESHOLD_PX) {
+          onSizeChange(wPx, hPx)
         }
       }, RESIZE_DEBOUNCE_MS)
     }
@@ -625,20 +618,22 @@ function ResizableImageItem({
       observer.disconnect()
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [containerRef, onSizeChange])
+  }, [onSizeChange, img.width, img.height])
 
-  const widthPct = img.width ?? DEFAULT_WIDTH_PCT
-  const heightPct = img.height ?? DEFAULT_HEIGHT_PCT
+  const widthPx = img.width ?? DEFAULT_WIDTH_PX
+  const heightPx = img.height ?? DEFAULT_HEIGHT_PX
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
       <div
         ref={resizableRef}
         style={{
-          width: `${widthPct}%`,
-          height: `${heightPct}%`,
-          minWidth: 100,
-          minHeight: 80,
+          width: widthPx,
+          height: heightPx,
+          minWidth: MIN_PX,
+          minHeight: MIN_PX,
+          maxWidth: MAX_PX,
+          maxHeight: MAX_PX,
           resize: 'both',
           overflow: 'auto',
         }}

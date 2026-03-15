@@ -69,9 +69,9 @@ export interface QuizBlock {
 export interface ImageWithCaption {
   id: string
   caption?: string
-  /** Porcentagem (0–100) da largura do container na visualização do aluno. */
+  /** Largura de exibição em pixels na visualização do aluno. */
   width?: number
-  /** Porcentagem (0–100) da altura do container na visualização do aluno. */
+  /** Altura de exibição em pixels na visualização do aluno. */
   height?: number
 }
 

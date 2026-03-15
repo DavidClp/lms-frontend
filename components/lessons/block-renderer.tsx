@@ -301,33 +301,35 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
             <span>Imagens</span>
           </div> */}
           <div className={cn(
-            'grid gap-3 w-full',
+            'flex flex-col gap-3 w-full',
             block.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
           )}>
             {block.images.map((img) => {
               const hasCustomSize = img.width != null || img.height != null
-              const wrapperStyle: React.CSSProperties = hasCustomSize
+              const imageContainerStyle: React.CSSProperties = hasCustomSize
                 ? {
-                    width: img.width != null ? `${img.width}%` : undefined,
-                    height: img.height != null ? `${img.height}%` : undefined,
+                    width: img.width != null ? img.width : undefined,
+                    height: img.height != null ? img.height : undefined,
+                    maxWidth: '100%',
                   }
                 : {}
               return (
-                <div key={img.id} className="space-y-1" style={wrapperStyle}>
+                <div key={img.id} className="space-y-2 flex flex-col">
                   <button
                     type="button"
                     onClick={() => setSelectedImageId(img.id)}
-                    className="w-full h-full min-h-0 flex items-center justify-center overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted/30"
+                    style={imageContainerStyle}
+                    className="w-full shrink-0 min-h-0 flex items-center justify-center overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted/30 self-start"
                   >
                     <img
                       src={imagesApi.getUrl(img.id)}
                       alt={img.caption ?? ''}
                       className="max-h-full max-w-full w-auto h-auto object-contain pointer-events-none"
                     />
-                  </button>
                   {img.caption && (
-                    <p className="text-center text-x italic">{img.caption}</p>
+                    <p className="text-md">{img.caption}</p>
                   )}
+                  </button>
                 </div>
               )
             })}
