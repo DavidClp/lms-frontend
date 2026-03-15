@@ -43,6 +43,7 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
         <div key={index}>
           {block.type === 'TEXT' && <TextBlockComponent value={block.value} />}
           {block.type === 'VIDEO' && <VideoBlockComponent url={block.url} title={block.title} />}
+          {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} />}
           {block.type === 'ACTIVITY_CHECKLIST' && (
             <ChecklistBlockComponent title={block.title} items={block.items} />
           )}
@@ -215,6 +216,31 @@ function VideoBlockComponent({ url, title }: { url: string; title?: string }) {
               title={title || 'Vídeo'}
             />
           )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function IframeBlockComponent({ url, title }: { url: string; title?: string }) {
+  if (!url?.trim()) return null
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          {title || 'Conteúdo incorporado'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 px-3 pb-3">
+        <div className="w-full overflow-hidden rounded-lg bg-muted" style={{ aspectRatio: '16/9' }}>
+          <iframe
+            src={url.trim()}
+            className="h-full w-full border-0"
+            title={title || 'Conteúdo incorporado'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+          />
         </div>
       </CardContent>
     </Card>

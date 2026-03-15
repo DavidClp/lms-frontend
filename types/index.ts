@@ -30,7 +30,7 @@ export interface Lesson {
   updatedAt?: string
 }
 
-export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ' | 'IMAGES' | 'OPEN_QUESTION'
+export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ' | 'IMAGES' | 'OPEN_QUESTION' | 'IFRAME'
 
 export interface TextBlock {
   type: 'TEXT'
@@ -39,6 +39,12 @@ export interface TextBlock {
 
 export interface VideoBlock {
   type: 'VIDEO'
+  url: string
+  title?: string
+}
+
+export interface IframeBlock {
+  type: 'IFRAME'
   url: string
   title?: string
 }
@@ -107,7 +113,7 @@ export interface OpenQuestionBlock {
   question: string
 }
 
-export type ContentBlock = TextBlock | VideoBlock | ActivityChecklistBlock | QuizBlock | ImagesBlock | OpenQuestionBlock
+export type ContentBlock = TextBlock | VideoBlock | IframeBlock | ActivityChecklistBlock | QuizBlock | ImagesBlock | OpenQuestionBlock
 
 /** Resultados do quiz por bloco (índice): lista de acerto/erro por pergunta */
 export type QuizResultsByBlock = Record<string, { questionId: string; correct: boolean }[]>

@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine } from 'lucide-react'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout } from 'lucide-react'
 import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
@@ -44,6 +44,7 @@ interface BlockEditorProps {
 function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'TEXT') return { type: 'TEXT', value: '' }
   if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '' }
+  if (type === 'IFRAME') return { type: 'IFRAME', url: '', title: '' }
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
   if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true, imageLayout: 'column' }
   if (type === 'OPEN_QUESTION') return { type: 'OPEN_QUESTION', question: '' }
@@ -134,6 +135,13 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   onChange={(url, title) => updateBlock(index, { type: 'VIDEO', url, title })}
                 />
               )}
+              {block.type === 'IFRAME' && (
+                <IframeBlockEditor
+                  url={block.url}
+                  title={block.title}
+                  onChange={(url, title) => updateBlock(index, { type: 'IFRAME', url, title })}
+                />
+              )}
               {block.type === 'ACTIVITY_CHECKLIST' && (
                 <ChecklistBlockEditor
                   title={block.title}
@@ -201,6 +209,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <Video className="h-4 w-4" /> Vídeo
               </div>
             </SelectItem>
+            <SelectItem value="IFRAME">
+              <div className="flex items-center gap-2">
+                <Layout className="h-4 w-4" /> Iframe (embed)
+              </div>
+            </SelectItem>
             <SelectItem value="ACTIVITY_CHECKLIST">
               <div className="flex items-center gap-2">
                 <CheckSquare className="h-4 w-4" /> Checklist
@@ -236,6 +249,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
 const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: React.ReactNode }[] = [
   { value: 'TEXT', label: 'Texto', icon: <FileText className="h-4 w-4" /> },
   { value: 'VIDEO', label: 'Vídeo', icon: <Video className="h-4 w-4" /> },
+  { value: 'IFRAME', label: 'Iframe (embed)', icon: <Layout className="h-4 w-4" /> },
   { value: 'ACTIVITY_CHECKLIST', label: 'Checklist', icon: <CheckSquare className="h-4 w-4" /> },
   { value: 'QUIZ', label: 'Quiz', icon: <HelpCircle className="h-4 w-4" /> },
   { value: 'IMAGES', label: 'Imagens', icon: <ImageIcon className="h-4 w-4" /> },
@@ -383,6 +397,44 @@ function VideoBlockEditor({
             value={url}
             onChange={(e) => onChange(e.target.value, title)}
             placeholder="https://www.youtube.com/watch?v=..."
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function IframeBlockEditor({
+  url,
+  title,
+  onChange,
+}: {
+  url: string
+  title?: string
+  onChange: (url: string, title?: string) => void
+}) {
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Layout className="h-4 w-4" /> Iframe (embed)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <Label>Título (opcional)</Label>
+          <Input
+            value={title ?? ''}
+            onChange={(e) => onChange(url, e.target.value)}
+            placeholder="Ex: Jogo de matemática"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>URL para incorporar</Label>
+          <Input
+            value={url}
+            onChange={(e) => onChange(e.target.value, title)}
+            placeholder="https://..."
           />
         </div>
       </CardContent>
