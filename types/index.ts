@@ -66,10 +66,31 @@ export interface QuizBlock {
   questions: QuizQuestion[]
 }
 
+export interface ImageWithCaption {
+  id: string
+  caption?: string
+  /** Porcentagem (0–100) da largura do container na visualização do aluno. */
+  width?: number
+  /** Porcentagem (0–100) da altura do container na visualização do aluno. */
+  height?: number
+}
+
 export interface ImagesBlock {
   type: 'IMAGES'
-  imageIds: string[]
-  caption?: string
+  images: ImageWithCaption[]
+}
+
+/** Normaliza bloco de imagens vindo da API (pode ser formato antigo imageIds + caption). */
+export function normalizeImagesBlock(block: ContentBlock): ImagesBlock | null {
+  if (block.type !== 'IMAGES') return null
+  const b = block as ImagesBlock & { imageIds?: string[]; caption?: string }
+  if (Array.isArray(b.images)) return { type: 'IMAGES', images: b.images }
+  if (Array.isArray(b.imageIds))
+    return {
+      type: 'IMAGES',
+      images: b.imageIds.map((id, i) => ({ id, caption: i === 0 ? b.caption : undefined })),
+    }
+  return { type: 'IMAGES', images: [] }
 }
 
 /** Atividade com pergunta e campo de texto para o aluno responder digitando */

@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock } from '@/types'
+import { normalizeImagesBlock } from '@/types'
 import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -53,7 +54,10 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
               savedBlockResults={savedQuizResults?.[index]}
             />
           )}
-          {block.type === 'IMAGES' && <ImagesBlockComponent block={block} />}
+          {block.type === 'IMAGES' && (() => {
+            const normalized = normalizeImagesBlock(block)
+            return normalized ? <ImagesBlockComponent block={normalized} /> : null
+          })()}
           {block.type === 'OPEN_QUESTION' && (
             <OpenQuestionBlockComponent
               block={block}
@@ -284,38 +288,50 @@ function ChecklistBlockComponent({ title, items }: { title?: string; items: stri
 function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
 
-  if (!block.imageIds || block.imageIds.length === 0) return null
+  if (!block.images || block.images.length === 0) return null
+
+  const selectedImage = selectedImageId ? block.images.find((img) => img.id === selectedImageId) : null
 
   return (
     <>
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+        <CardContent className="pt-0">
+        {/*   <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
             <ImageIcon className="h-4 w-4 text-primary" />
             <span>Imagens</span>
-          </div>
+          </div> */}
           <div className={cn(
-            'grid gap-3',
-            block.imageIds.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+            'grid gap-3 w-full',
+            block.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
           )}>
-            {block.imageIds.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setSelectedImageId(id)}
-                className="overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              >
-                <img
-                  src={imagesApi.getUrl(id)}
-                  alt={block.caption ?? ''}
-                  className="max-h-100 object-cover object-center cursor-pointer"
-                />
-              </button>
-            ))}
+            {block.images.map((img) => {
+              const hasCustomSize = img.width != null || img.height != null
+              const wrapperStyle: React.CSSProperties = hasCustomSize
+                ? {
+                    width: img.width != null ? `${img.width}%` : undefined,
+                    height: img.height != null ? `${img.height}%` : undefined,
+                  }
+                : {}
+              return (
+                <div key={img.id} className="space-y-1" style={wrapperStyle}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImageId(img.id)}
+                    className="w-full h-full min-h-0 flex items-center justify-center overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted/30"
+                  >
+                    <img
+                      src={imagesApi.getUrl(img.id)}
+                      alt={img.caption ?? ''}
+                      className="max-h-full max-w-full w-auto h-auto object-contain pointer-events-none"
+                    />
+                  </button>
+                  {img.caption && (
+                    <p className="text-center text-x italic">{img.caption}</p>
+                  )}
+                </div>
+              )
+            })}
           </div>
-          {block.caption && (
-            <p className="mt-2 text-center text-sm text-muted-foreground italic">{block.caption}</p>
-          )}
         </CardContent>
       </Card>
 
@@ -329,10 +345,13 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
               <div className="flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
                 <img
                   src={imagesApi.getUrl(selectedImageId)}
-                  alt={block.caption ?? 'Imagem ampliada'}
+                  alt={selectedImage?.caption ?? 'Imagem ampliada'}
                   className="max-w-full max-h-[70vh] w-auto h-auto object-contain"
                 />
               </div>
+              {selectedImage?.caption && (
+                <p className="text-center text-sm text-muted-foreground italic">{selectedImage.caption}</p>
+              )}
               <div className="flex justify-end">
                 <Button variant="outline" onClick={() => setSelectedImageId(null)}>
                   Sair

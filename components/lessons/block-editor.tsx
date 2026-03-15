@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -29,7 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine } from 'lucide-react'
-import type { ContentBlock, BlockType, QuizBlock, QuizQuestion } from '@/types'
+import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption } from '@/types'
+import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Textarea } from '../ui/textarea'
@@ -39,8 +40,26 @@ interface BlockEditorProps {
   onChange: (blocks: ContentBlock[]) => void
 }
 
+function createBlockByType(type: BlockType): ContentBlock {
+  if (type === 'TEXT') return { type: 'TEXT', value: '' }
+  if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '' }
+  if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
+  if (type === 'IMAGES') return { type: 'IMAGES', images: [] }
+  if (type === 'OPEN_QUESTION') return { type: 'OPEN_QUESTION', question: '' }
+  return {
+    type: 'QUIZ',
+    questions: [{
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`,
+      question: '',
+      options: [{ id: 'a', text: '' }, { id: 'b', text: '' }],
+      correctOptionId: 'a',
+    }],
+  } as QuizBlock
+}
+
 export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   const [addingType, setAddingType] = useState<BlockType | ''>('')
+  const [insertBelowIndex, setInsertBelowIndex] = useState<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -56,35 +75,16 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
 
   const addBlock = () => {
     if (!addingType) return
-    let newBlock: ContentBlock
-    if (addingType === 'TEXT') {
-      newBlock = { type: 'TEXT', value: '' }
-    } else if (addingType === 'VIDEO') {
-      newBlock = { type: 'VIDEO', url: '', title: '' }
-    } else if (addingType === 'ACTIVITY_CHECKLIST') {
-      newBlock = { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
-    } else if (addingType === 'IMAGES') {
-      newBlock = { type: 'IMAGES', imageIds: [], caption: '' }
-    } else if (addingType === 'OPEN_QUESTION') {
-      newBlock = { type: 'OPEN_QUESTION', question: '' }
-    } else {
-      newBlock = {
-        type: 'QUIZ',
-        questions: [
-          {
-            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`,
-            question: '',
-            options: [
-              { id: 'a', text: '' },
-              { id: 'b', text: '' },
-            ],
-            correctOptionId: 'a',
-          },
-        ],
-      } as QuizBlock
-    }
-    onChange([...blocks, newBlock])
+    onChange([...blocks, createBlockByType(addingType)])
     setAddingType('')
+  }
+
+  const confirmInsertBelow = (type: BlockType) => {
+    if (insertBelowIndex === null) return
+    const newBlock = createBlockByType(type)
+    const next = [...blocks.slice(0, insertBelowIndex + 1), newBlock, ...blocks.slice(insertBelowIndex + 1)]
+    onChange(next)
+    setInsertBelowIndex(null)
   }
 
   const removeBlock = (index: number) => {
@@ -114,7 +114,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
             <SortableBlockItem
               key={index}
               id={String(index)}
+              index={index}
+              insertBelowIndex={insertBelowIndex}
               onRemove={() => removeBlock(index)}
+              onAddBelow={() => setInsertBelowIndex((i) => (i === index ? null : index))}
+              onConfirmInsertBelow={confirmInsertBelow}
             >
               {block.type === 'TEXT' && (
                 <TextBlockEditor
@@ -146,15 +150,18 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   }
                 />
               )}
-              {block.type === 'IMAGES' && (
-                <ImageBlockEditor
-                  imageIds={block.imageIds}
-                  caption={block.caption}
-                  onChange={(imageIds, caption) =>
-                    updateBlock(index, { type: 'IMAGES', imageIds, caption })
-                  }
-                />
-              )}
+              {block.type === 'IMAGES' && (() => {
+                const normalized = normalizeImagesBlock(block)
+                if (!normalized) return null
+                return (
+                  <ImageBlockEditor
+                    images={normalized.images}
+                    onChange={(images) =>
+                      updateBlock(index, { type: 'IMAGES', images })
+                    }
+                  />
+                )
+              })()}
               {block.type === 'OPEN_QUESTION' && (
                 <OpenQuestionBlockEditor
                   question={block.question}
@@ -211,24 +218,43 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
           Adicionar
         </Button>
       </div>
+
     </div>
   )
 }
 
+const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: React.ReactNode }[] = [
+  { value: 'TEXT', label: 'Texto', icon: <FileText className="h-4 w-4" /> },
+  { value: 'VIDEO', label: 'Vídeo', icon: <Video className="h-4 w-4" /> },
+  { value: 'ACTIVITY_CHECKLIST', label: 'Checklist', icon: <CheckSquare className="h-4 w-4" /> },
+  { value: 'QUIZ', label: 'Quiz', icon: <HelpCircle className="h-4 w-4" /> },
+  { value: 'IMAGES', label: 'Imagens', icon: <ImageIcon className="h-4 w-4" /> },
+  { value: 'OPEN_QUESTION', label: 'Pergunta (texto)', icon: <PenLine className="h-4 w-4" /> },
+]
+
 function SortableBlockItem({
   id,
+  index,
+  insertBelowIndex,
   children,
   onRemove,
+  onAddBelow,
+  onConfirmInsertBelow,
 }: {
   id: string
+  index: number
+  insertBelowIndex: number | null
   children: React.ReactNode
   onRemove: () => void
+  onAddBelow: () => void
+  onConfirmInsertBelow: (type: BlockType) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
+  const showInsertSelect = insertBelowIndex === index
 
   return (
     <div
@@ -244,14 +270,48 @@ function SortableBlockItem({
         <GripVertical className="h-5 w-5" />
       </div>
       <div className="flex-1">{children}</div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="mt-2 shrink-0 text-destructive hover:text-destructive"
-        onClick={onRemove}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <div className="flex flex-col gap-1 shrink-0 mt-2 w-[25px]">
+        <div className="flex gap-1  flex-col">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive h-8 w-8"
+            onClick={onRemove}
+            title="Excluir bloco"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            onClick={onAddBelow}
+            title="Adicionar bloco abaixo"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        {showInsertSelect && (
+          <Select
+            onValueChange={(v) => {
+              onConfirmInsertBelow(v as BlockType)
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Tipo..." />
+            </SelectTrigger>
+            <SelectContent>
+              {BLOCK_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  <div className="flex items-center gap-2">
+                    {opt.icon} {opt.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
     </div>
   )
 }
@@ -264,7 +324,7 @@ function TextBlockEditor({
   onChange: (value: string) => void
 }) {
   return (
-    <Card>
+    <Card className='gap-0'>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <FileText className="h-4 w-4" /> Texto
@@ -292,7 +352,7 @@ function VideoBlockEditor({
   onChange: (url: string, title?: string) => void
 }) {
   return (
-    <Card>
+    <Card className='gap-0'>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <Video className="h-4 w-4" /> Vídeo
@@ -370,7 +430,7 @@ function ChecklistBlockEditor({
     onChange(title, items.filter((_, i) => i !== index))
 
   return (
-    <Card>
+    <Card className='gap-0'>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <CheckSquare className="h-4 w-4" /> Checklist
@@ -413,29 +473,31 @@ function ChecklistBlockEditor({
   )
 }
 
+const DEFAULT_WIDTH_PCT = 50
+const DEFAULT_HEIGHT_PCT = 40
+const MIN_PCT = 10
+const MAX_PCT = 100
+const RESIZE_DEBOUNCE_MS = 150
+/** Só persiste tamanho se a diferença for maior que isso (evita loop de encolher). */
+const SIZE_CHANGE_THRESHOLD_PCT = 2
+
 function ImageBlockEditor({
-  imageIds,
-  caption,
+  images,
   onChange,
 }: {
-  imageIds: string[]
-  caption?: string
-  onChange: (imageIds: string[], caption?: string) => void
+  images: ImageWithCaption[]
+  onChange: (images: ImageWithCaption[]) => void
 }) {
   const [uploading, setUploading] = useState(false)
-  const [previews, setPreviews] = useState<{ id: string; url: string }[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
     setUploading(true)
     try {
       const uploaded = await imagesApi.upload(Array.from(files))
-      const newPreviews = uploaded.map((img) => ({
-        id: img.id,
-        url: imagesApi.getUrl(img.id),
-      }))
-      setPreviews((prev) => [...prev, ...newPreviews])
-      onChange([...imageIds, ...uploaded.map((img) => img.id)], caption)
+      const newImages: ImageWithCaption[] = uploaded.map((img) => ({ id: img.id, caption: '' }))
+      onChange([...images, ...newImages])
     } catch {
       // silently ignore upload errors in editor
     } finally {
@@ -444,40 +506,50 @@ function ImageBlockEditor({
   }
 
   const removeImage = (id: string) => {
-    setPreviews((prev) => prev.filter((p) => p.id !== id))
-    onChange(imageIds.filter((imgId) => imgId !== id), caption)
+    onChange(images.filter((img) => img.id !== id))
   }
 
+  const updateCaption = (id: string, caption: string) => {
+    onChange(
+      images.map((img) => (img.id === id ? { ...img, caption: caption || undefined } : img))
+    )
+  }
+
+  const updateImageSize = useCallback(
+    (id: string, width: number, height: number) => {
+      const w = Math.min(MAX_PCT, Math.max(MIN_PCT, width))
+      const h = Math.min(MAX_PCT, Math.max(MIN_PCT, height))
+      onChange(
+        images.map((img) => (img.id === id ? { ...img, width: w, height: h } : img))
+      )
+    },
+    [images, onChange]
+  )
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className='gap-0'>
+      <CardHeader className="">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <ImageIcon className="h-4 w-4" /> Imagens
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {previews.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {previews.map((preview) => (
-              <div key={preview.id} className="relative group rounded-lg overflow-hidden border bg-muted aspect-video">
-                <img
-                  src={preview.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(preview.id)}
-                  className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+        {images.length > 0 && (
+          <div ref={containerRef} className="space-y-4">
+            {images.map((img) => (
+              <ResizableImageItem
+                key={img.id}
+                img={img}
+                containerRef={containerRef}
+                onRemove={() => removeImage(img.id)}
+                onCaptionChange={(caption) => updateCaption(img.id, caption)}
+                onSizeChange={(width, height) => updateImageSize(img.id, width, height)}
+              />
             ))}
           </div>
         )}
         <Label
-          htmlFor={`img-upload-${imageIds.join('-')}`}
+          htmlFor={`img-upload-${images.map((i) => i.id).join('-')}`}
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-sm text-muted-foreground transition-colors hover:bg-muted/50',
             uploading && 'pointer-events-none opacity-50'
@@ -489,7 +561,7 @@ function ImageBlockEditor({
             <><ImageIcon className="mb-2 h-5 w-5" /> Clique para adicionar imagens</>
           )}
           <input
-            id={`img-upload-${imageIds.join('-')}`}
+            id={`img-upload-${images.map((i) => i.id).join('-')}`}
             type="file"
             accept="image/*"
             multiple
@@ -497,16 +569,103 @@ function ImageBlockEditor({
             onChange={(e) => handleFiles(e.target.files)}
           />
         </Label>
-        <div className="space-y-1">
-          <Label>Legenda (opcional)</Label>
-          <Input
-            value={caption ?? ''}
-            onChange={(e) => onChange(imageIds, e.target.value || undefined)}
-            placeholder="Legenda das imagens"
-          />
-        </div>
       </CardContent>
     </Card>
+  )
+}
+
+function ResizableImageItem({
+  img,
+  containerRef,
+  onRemove,
+  onCaptionChange,
+  onSizeChange,
+}: {
+  img: ImageWithCaption
+  containerRef: React.RefObject<HTMLDivElement | null>
+  onRemove: () => void
+  onCaptionChange: (caption: string) => void
+  onSizeChange: (width: number, height: number) => void
+}) {
+  const resizableRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const initialCallRef = useRef(true)
+
+  useEffect(() => {
+    const el = resizableRef.current
+    const container = containerRef.current
+    if (!el || !container) return
+
+    const handleResize = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null
+        if (initialCallRef.current) {
+          initialCallRef.current = false
+          return
+        }
+        const cw = container.offsetWidth
+        const ch = container.offsetHeight
+        if (cw <= 0 || ch <= 0) return
+        const wPct = Math.min(MAX_PCT, Math.max(MIN_PCT, (el.offsetWidth / cw) * 100))
+        const hPct = Math.min(MAX_PCT, Math.max(MIN_PCT, (el.offsetHeight / ch) * 100))
+        const currentW = img.width ?? DEFAULT_WIDTH_PCT
+        const currentH = img.height ?? DEFAULT_HEIGHT_PCT
+        const diffW = Math.abs(wPct - currentW)
+        const diffH = Math.abs(hPct - currentH)
+        if (diffW >= SIZE_CHANGE_THRESHOLD_PCT || diffH >= SIZE_CHANGE_THRESHOLD_PCT) {
+          onSizeChange(wPct, hPct)
+        }
+      }, RESIZE_DEBOUNCE_MS)
+    }
+
+    const observer = new ResizeObserver(handleResize)
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [containerRef, onSizeChange])
+
+  const widthPct = img.width ?? DEFAULT_WIDTH_PCT
+  const heightPct = img.height ?? DEFAULT_HEIGHT_PCT
+
+  return (
+    <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+      <div
+        ref={resizableRef}
+        style={{
+          width: `${widthPct}%`,
+          height: `${heightPct}%`,
+          minWidth: 100,
+          minHeight: 80,
+          resize: 'both',
+          overflow: 'auto',
+        }}
+        className="relative group rounded-lg border border-primary/30 bg-muted"
+      >
+        <img
+          src={imagesApi.getUrl(img.id)}
+          alt={img.caption ?? ''}
+          className="h-full w-full object-cover pointer-events-none"
+        />
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Legenda (opcional)</Label>
+        <Input
+          value={img.caption ?? ''}
+          onChange={(e) => onCaptionChange(e.target.value)}
+          placeholder="Legenda desta imagem"
+        />
+      </div>
+    </div>
   )
 }
 
@@ -554,7 +713,7 @@ function QuizBlockEditor({
   }
 
   return (
-    <Card>
+    <Card className='gap-0'>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <HelpCircle className="h-4 w-4" /> Quiz
