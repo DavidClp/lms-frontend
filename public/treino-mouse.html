@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Treino de Mouse</title>
+
+<style>
+body{
+  font-family: Arial;
+  background:#2c7be5;
+  height:100vh;
+  margin:0;
+}
+
+.desktop{
+  position:relative;
+  width:100%;
+  height:100%;
+}
+
+.icon{
+  width:80px;
+  text-align:center;
+  color:white;
+  cursor:grab;
+  position:absolute;
+}
+
+.icon img{
+  width:48px;
+}
+
+#file1{top:80px; left:80px;}
+#file2{top:180px; left:80px;}
+
+.trash{
+  position:absolute;
+  bottom:40px;
+  right:40px;
+  text-align:center;
+  color:white;
+}
+
+.trash img{
+  width:60px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="desktop">
+
+<div class="icon" id="file1" draggable="true">
+<img src="https://cdn-icons-png.flaticon.com/512/716/716784.png">
+<div>Arquivo</div>
+</div>
+
+<div class="icon" id="file2" draggable="true">
+<img src="https://cdn-icons-png.flaticon.com/512/716/716784.png">
+<div>Foto</div>
+</div>
+
+<div class="trash" id="trash">
+<img src="https://cdn-icons-png.flaticon.com/512/565/565491.png">
+<div>Lixeira</div>
+</div>
+
+</div>
+
+<script>
+const icons = document.querySelectorAll('.icon')
+const trash = document.getElementById('trash')
+
+icons.forEach(icon=>{
+  icon.addEventListener('dragstart', e=>{
+    e.dataTransfer.setData("id", icon.id)
+  })
+})
+
+trash.addEventListener('dragover', e=>{
+  e.preventDefault()
+})
+
+trash.addEventListener('drop', e=>{
+  e.preventDefault()
+  const id = e.dataTransfer.getData("id")
+  document.getElementById(id).remove()
+  alert("Arquivo movido para a lixeira!")
+})
+</script>
+
+</body>
+</html>
