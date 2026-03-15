@@ -5,11 +5,24 @@
 <title>Treino de Mouse</title>
 
 <style>
+
 body{
   font-family: Arial;
   background:#2c7be5;
   height:100vh;
   margin:0;
+  color:white;
+}
+
+.instructions{
+  position:absolute;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.6);
+  padding:15px 25px;
+  border-radius:10px;
+  font-size:18px;
 }
 
 .desktop{
@@ -21,8 +34,7 @@ body{
 .icon{
   width:80px;
   text-align:center;
-  color:white;
-  cursor:grab;
+  cursor:pointer;
   position:absolute;
 }
 
@@ -30,28 +42,36 @@ body{
   width:48px;
 }
 
-#file1{top:80px; left:80px;}
-#file2{top:180px; left:80px;}
+#file1{top:120px; left:120px;}
+#file2{top:220px; left:120px;}
 
 .trash{
   position:absolute;
   bottom:40px;
   right:40px;
   text-align:center;
-  color:white;
 }
 
 .trash img{
   width:60px;
 }
+
+.highlight{
+  outline:3px solid yellow;
+}
+
 </style>
 </head>
 
 <body>
 
+<div class="instructions" id="task">
+Mova o mouse até o ícone "Arquivo".
+</div>
+
 <div class="desktop">
 
-<div class="icon" id="file1" draggable="true">
+<div class="icon highlight" id="file1" draggable="true">
 <img src="https://cdn-icons-png.flaticon.com/512/716/716784.png">
 <div>Arquivo</div>
 </div>
@@ -69,25 +89,71 @@ body{
 </div>
 
 <script>
-const icons = document.querySelectorAll('.icon')
-const trash = document.getElementById('trash')
 
-icons.forEach(icon=>{
-  icon.addEventListener('dragstart', e=>{
-    e.dataTransfer.setData("id", icon.id)
-  })
+let step = 1
+const task = document.getElementById("task")
+const file1 = document.getElementById("file1")
+const file2 = document.getElementById("file2")
+const trash = document.getElementById("trash")
+
+// PASSO 1 — mover mouse
+file1.addEventListener("mouseover", () => {
+
+  if(step === 1){
+    step = 2
+    task.innerText = "Agora clique UMA vez no ícone Arquivo."
+  }
+
 })
 
-trash.addEventListener('dragover', e=>{
+// PASSO 2 — clique simples
+file1.addEventListener("click", () => {
+
+  if(step === 2){
+    step = 3
+    task.innerText = "Agora dê um DUPLO CLIQUE no ícone Foto."
+    file1.classList.remove("highlight")
+    file2.classList.add("highlight")
+  }
+
+})
+
+// PASSO 3 — duplo clique
+file2.addEventListener("dblclick", () => {
+
+  if(step === 3){
+    step = 4
+    task.innerText = "Agora arraste o ícone Foto até a Lixeira."
+    file2.classList.remove("highlight")
+  }
+
+})
+
+// PASSO 4 — arrastar
+
+file2.addEventListener("dragstart", e=>{
+  e.dataTransfer.setData("id","file2")
+})
+
+trash.addEventListener("dragover", e=>{
   e.preventDefault()
 })
 
-trash.addEventListener('drop', e=>{
+trash.addEventListener("drop", e=>{
+
   e.preventDefault()
-  const id = e.dataTransfer.getData("id")
-  document.getElementById(id).remove()
-  alert("Arquivo movido para a lixeira!")
+
+  if(step === 4){
+
+    const id = e.dataTransfer.getData("id")
+    document.getElementById(id).remove()
+
+    task.innerText = "🎉 Parabéns! Você completou o treinamento do mouse."
+
+  }
+
 })
+
 </script>
 
 </body>
