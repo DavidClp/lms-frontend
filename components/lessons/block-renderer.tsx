@@ -291,11 +291,12 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
   if (!block.images || block.images.length === 0) return null
 
   const selectedImage = selectedImageId ? block.images.find((img) => img.id === selectedImageId) : null
+  const withBorder = block.cardWithBorder !== false
 
   return (
     <>
-      <Card>
-        <CardContent className="pt-0">
+      <Card className={cn(!withBorder && 'border-0 shadow-none pt-0 pb-0 mt-[-20px]')}>
+        <CardContent className="pt-0 px-3">
         {/*   <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
             <ImageIcon className="h-4 w-4 text-primary" />
             <span>Imagens</span>
@@ -314,12 +315,12 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
                   }
                 : {}
               return (
-                <div key={img.id} className="space-y-2 flex flex-col">
+                <div key={img.id} className=" flex flex-col">
                   <button
                     type="button"
                     onClick={() => setSelectedImageId(img.id)}
                     style={imageContainerStyle}
-                    className="w-full shrink-0 min-h-0 flex items-center justify-center overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted/30 self-start"
+                    className="w-full shrink-0 min-h-0 p-0 m-0 flex items-center justify-center overflow-hidden rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted/30 self-start"
                   >
                     <img
                       src={imagesApi.getUrl(img.id)}

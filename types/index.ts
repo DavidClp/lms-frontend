@@ -78,19 +78,22 @@ export interface ImageWithCaption {
 export interface ImagesBlock {
   type: 'IMAGES'
   images: ImageWithCaption[]
+  /** Se true ou indefinido, o card tem borda e sombra; se false, sem borda nem sombra. */
+  cardWithBorder?: boolean
 }
 
 /** Normaliza bloco de imagens vindo da API (pode ser formato antigo imageIds + caption). */
 export function normalizeImagesBlock(block: ContentBlock): ImagesBlock | null {
   if (block.type !== 'IMAGES') return null
   const b = block as ImagesBlock & { imageIds?: string[]; caption?: string }
-  if (Array.isArray(b.images)) return { type: 'IMAGES', images: b.images }
+  if (Array.isArray(b.images)) return { type: 'IMAGES', images: b.images, cardWithBorder: b.cardWithBorder }
   if (Array.isArray(b.imageIds))
     return {
       type: 'IMAGES',
       images: b.imageIds.map((id, i) => ({ id, caption: i === 0 ? b.caption : undefined })),
+      cardWithBorder: true,
     }
-  return { type: 'IMAGES', images: [] }
+  return { type: 'IMAGES', images: [], cardWithBorder: true }
 }
 
 /** Atividade com pergunta e campo de texto para o aluno responder digitando */

@@ -29,11 +29,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine } from 'lucide-react'
-import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption } from '@/types'
+import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Textarea } from '../ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface BlockEditorProps {
   blocks: ContentBlock[]
@@ -44,7 +45,7 @@ function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'TEXT') return { type: 'TEXT', value: '' }
   if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '' }
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
-  if (type === 'IMAGES') return { type: 'IMAGES', images: [] }
+  if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true }
   if (type === 'OPEN_QUESTION') return { type: 'OPEN_QUESTION', question: '' }
   return {
     type: 'QUIZ',
@@ -153,11 +154,16 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
               {block.type === 'IMAGES' && (() => {
                 const normalized = normalizeImagesBlock(block)
                 if (!normalized) return null
+                const current = block as ImagesBlock
                 return (
                   <ImageBlockEditor
                     images={normalized.images}
+                    cardWithBorder={normalized.cardWithBorder ?? true}
                     onChange={(images) =>
-                      updateBlock(index, { type: 'IMAGES', images })
+                      updateBlock(index, { type: 'IMAGES', images, cardWithBorder: current.cardWithBorder ?? true })
+                    }
+                    onCardWithBorderChange={(cardWithBorder) =>
+                      updateBlock(index, { type: 'IMAGES', images: normalized.images, cardWithBorder })
                     }
                   />
                 )
@@ -483,10 +489,14 @@ const SIZE_CHANGE_THRESHOLD_PX = 8
 
 function ImageBlockEditor({
   images,
+  cardWithBorder,
   onChange,
+  onCardWithBorderChange,
 }: {
   images: ImageWithCaption[]
+  cardWithBorder: boolean
   onChange: (images: ImageWithCaption[]) => void
+  onCardWithBorderChange: (cardWithBorder: boolean) => void
 }) {
   const [uploading, setUploading] = useState(false)
 
@@ -526,13 +536,26 @@ function ImageBlockEditor({
   )
 
   return (
-    <Card className='gap-0'>
+    <Card className="gap-0">
       <CardHeader className="">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <ImageIcon className="h-4 w-4" /> Imagens
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="card-with-border"
+            checked={cardWithBorder}
+            onCheckedChange={(checked) => onCardWithBorderChange(checked === true)}
+          />
+          <label
+            htmlFor="card-with-border"
+            className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Card com contorno
+          </label>
+        </div>
         {images.length > 0 && (
           <div className="space-y-4">
             {images.map((img) => (
