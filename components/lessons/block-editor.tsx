@@ -794,7 +794,7 @@ function QuizBlockEditor({
       {
         id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`,
         question: '',
-        options: [{ id: 'a', text: '' }, { id: 'b', text: '' }],
+        options: [{ id: 'a', text: '' }, { id: 'b', text: '' }, { id: 'c', text: '' }, { id: 'd', text: '' }],
         correctOptionId: 'a',
       },
     ])
