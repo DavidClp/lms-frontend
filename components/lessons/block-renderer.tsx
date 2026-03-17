@@ -225,8 +225,15 @@ function VideoBlockComponent({ url, title, isGoogleDrive }: { url: string; title
   )
 }
 
-function IframeBlockComponent({ url, title }: { url: string; title?: string }) {
-  if (!url?.trim()) return null
+const GOOGLE_DOC_EMBED_PADDING_BOTTOM = 129.4118
+
+function IframeBlockComponent({ url, title, googleDocId }: { url: string; title?: string; googleDocId?: string }) {
+  const docId = googleDocId?.trim()
+  const embedUrl = docId
+    ? `https://docs.google.com/document/d/${docId}/preview?usp=embed_googleplus`
+    : url?.trim()
+  if (!embedUrl) return null
+  const isGoogleDoc = !!docId
   return (
     <Card className="gap-0">
       <CardHeader className="pb-2">
@@ -235,10 +242,18 @@ function IframeBlockComponent({ url, title }: { url: string; title?: string }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 px-3 pb-3">
-        <div className="w-full overflow-hidden rounded-lg bg-muted" style={{ aspectRatio: '16/9' }}>
+        <div
+          className="w-full overflow-hidden rounded-lg bg-muted"
+          style={
+            isGoogleDoc
+              ? { left: 0, width: '100%', height: 0, position: 'relative' as const, paddingBottom: `${GOOGLE_DOC_EMBED_PADDING_BOTTOM}%` }
+              : { aspectRatio: '16/9' }
+          }
+        >
           <iframe
-            src={url.trim()}
-            className="h-full w-full border-0"
+            src={embedUrl}
+            className={isGoogleDoc ? 'border-0' : 'h-full w-full border-0'}
+            style={isGoogleDoc ? { top: 0, left: 0, width: '100%', height: '100%', position: 'absolute' as const } : undefined}
             title={title || 'Conteúdo incorporado'}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
