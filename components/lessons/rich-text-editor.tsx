@@ -85,11 +85,11 @@ const FontFamily = Extension.create({
   },
 })
 
-// Tamanhos de 8 a 30 (em px)
+// Tamanhos de 10 a 30 (em px)
 const FONT_SIZES = [
   { label: 'Padrão', value: '' },
-  ...Array.from({ length: 23 }, (_, i) => {
-    const px = i + 8
+  ...Array.from({ length: 21 }, (_, i) => {
+    const px = i + 10
     return { label: `${px}`, value: `${px}px` }
   }),
 ]
@@ -105,13 +105,16 @@ const FONT_FAMILIES = [
 
 const TEXT_COLORS = [
   { name: 'Padrão', value: '' },
+  { name: 'Preto', value: '#000000' },
   { name: 'Cinza', value: '#6b7280' },
   { name: 'Vermelho', value: '#dc2626' },
   { name: 'Laranja', value: '#ea580c' },
   { name: 'Amarelo', value: '#ca8a04' },
   { name: 'Verde', value: '#16a34a' },
   { name: 'Azul', value: '#2563eb' },
+  { name: 'Ciano', value: '#0891b2' },
   { name: 'Roxo', value: '#9333ea' },
+  { name: 'Rosa claro', value: '#f9a8d4' },
 ]
 
 // Enter = uma linha (br); Shift+Enter = novo parágrafo
