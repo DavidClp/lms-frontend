@@ -43,7 +43,7 @@ interface BlockEditorProps {
 
 function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'TEXT') return { type: 'TEXT', value: '' }
-  if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '' }
+  if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '', isGoogleDrive: false }
   if (type === 'IFRAME') return { type: 'IFRAME', url: '', title: '' }
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
   if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true, imageLayout: 'column' }
@@ -132,7 +132,8 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <VideoBlockEditor
                   url={block.url}
                   title={block.title}
-                  onChange={(url, title) => updateBlock(index, { type: 'VIDEO', url, title })}
+                  isGoogleDrive={block.isGoogleDrive}
+                  onChange={(url, title, isGoogleDrive) => updateBlock(index, { type: 'VIDEO', url, title, isGoogleDrive })}
                 />
               )}
               {block.type === 'IFRAME' && (
@@ -369,11 +370,13 @@ function TextBlockEditor({
 function VideoBlockEditor({
   url,
   title,
+  isGoogleDrive = false,
   onChange,
 }: {
   url: string
   title?: string
-  onChange: (url: string, title?: string) => void
+  isGoogleDrive?: boolean
+  onChange: (url: string, title?: string, isGoogleDrive?: boolean) => void
 }) {
   return (
     <Card className='gap-0'>
@@ -383,20 +386,30 @@ function VideoBlockEditor({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="video-google-drive"
+            checked={isGoogleDrive}
+            onCheckedChange={(checked) => onChange(url, title, checked === true)}
+          />
+          <Label htmlFor="video-google-drive" className="cursor-pointer font-normal">
+            Google Drive
+          </Label>
+        </div>
         <div className="space-y-1">
           <Label>Título (opcional)</Label>
           <Input
             value={title ?? ''}
-            onChange={(e) => onChange(url, e.target.value)}
+            onChange={(e) => onChange(url, e.target.value, isGoogleDrive)}
             placeholder="Título do vídeo"
           />
         </div>
         <div className="space-y-1">
-          <Label>URL do YouTube</Label>
+          <Label>{isGoogleDrive ? 'URL de incorporação do Google Drive' : 'URL do YouTube'}</Label>
           <Input
             value={url}
-            onChange={(e) => onChange(e.target.value, title)}
-            placeholder="https://www.youtube.com/watch?v=..."
+            onChange={(e) => onChange(e.target.value, title, isGoogleDrive)}
+            placeholder={isGoogleDrive ? 'https://drive.google.com/file/d/.../preview' : 'https://www.youtube.com/watch?v=...'}
           />
         </div>
       </CardContent>

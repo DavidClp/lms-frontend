@@ -42,6 +42,8 @@ export interface VideoBlock {
   type: 'VIDEO'
   url: string
   title?: string
+  /** Se true, a URL é de incorporação do Google Drive (ex.: .../file/d/ID/preview). */
+  isGoogleDrive?: boolean
 }
 
 export interface IframeBlock {

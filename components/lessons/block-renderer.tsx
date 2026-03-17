@@ -42,7 +42,7 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
       {blocks?.map((block, index) => (
         <div key={index}>
           {block.type === 'TEXT' && <TextBlockComponent value={block.value} />}
-          {block.type === 'VIDEO' && <VideoBlockComponent url={block.url} title={block.title} />}
+          {block.type === 'VIDEO' && <VideoBlockComponent url={block.url} title={block.title} isGoogleDrive={block.isGoogleDrive} />}
           {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} />}
           {block.type === 'ACTIVITY_CHECKLIST' && (
             <ChecklistBlockComponent title={block.title} items={block.items} />
@@ -107,11 +107,11 @@ function getYouTubeVideoId(videoUrl: string): string | null {
   return match && match[2].length === 11 ? match[2] : null
 }
 
-function VideoBlockComponent({ url, title }: { url: string; title?: string }) {
+function VideoBlockComponent({ url, title, isGoogleDrive }: { url: string; title?: string; isGoogleDrive?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<unknown>(null)
   const videoId = getYouTubeVideoId(url)
-  const isYouTube = videoId !== null
+  const isYouTube = !isGoogleDrive && videoId !== null
 
   useEffect(() => {
     if (!isYouTube || !containerRef.current || !videoId) return
@@ -195,6 +195,8 @@ function VideoBlockComponent({ url, title }: { url: string; title?: string }) {
     return videoUrl
   }
 
+  const embedUrl = isGoogleDrive ? url.trim() : getEmbedUrl(url)
+
   return (
     <Card className='gap-0'>
       <CardHeader className="pb-0">
@@ -209,11 +211,12 @@ function VideoBlockComponent({ url, title }: { url: string; title?: string }) {
             <div ref={containerRef} className="h-full w-full" />
           ) : (
             <iframe
-              src={getEmbedUrl(url)}
-              className="h-full w-full"
+              src={embedUrl}
+              className="h-full w-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               title={title || 'Vídeo'}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
             />
           )}
         </div>
