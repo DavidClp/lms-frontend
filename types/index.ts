@@ -25,6 +25,7 @@ export interface Lesson {
   title: string
   order: number
   content: ContentBlock[]
+  isActive?: boolean
   module?: Module
   createdAt?: string
   updatedAt?: string
@@ -177,6 +178,7 @@ export interface LessonFormData {
   title: string
   order: number
   content: ContentBlock[]
+  isActive?: boolean
 }
 
 export interface UserFormData {

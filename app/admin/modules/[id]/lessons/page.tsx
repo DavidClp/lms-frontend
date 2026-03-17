@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Spinner } from '@/components/ui/spinner'
+import { Checkbox } from '@/components/ui/checkbox'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/layout/empty-state'
 import { useModule, useModuleLessons, useCreateLesson, useUpdateLesson, useDeleteLesson } from '@/hooks/use-api'
@@ -56,6 +57,7 @@ interface CreateLessonData {
   title: string
   order: number
   content: never[]
+  isActive?: boolean
 }
 
 export default function ModuleLessonsPage() {
@@ -75,9 +77,10 @@ export default function ModuleLessonsPage() {
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
   const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateLessonData>({
-    defaultValues: { moduleId, title: '', order: 1, content: [] }
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CreateLessonData>({
+    defaultValues: { moduleId, title: '', order: 1, content: [], isActive: true }
   })
+  const isActive = watch('isActive')
 
   const isLoading = moduleLoading || lessonsLoading
 
@@ -112,7 +115,7 @@ export default function ModuleLessonsPage() {
           const newOrder = reordered.indexOf(lesson) + 1
           return updateLesson.mutateAsync({
             id: lesson.id,
-            data: { moduleId: lesson.moduleId, title: lesson.title, order: newOrder, content: lesson.content },
+            data: { moduleId: lesson.moduleId, title: lesson.title, order: newOrder, content: lesson.content, isActive: lesson.isActive },
           })
         })
       )
@@ -127,13 +130,13 @@ export default function ModuleLessonsPage() {
 
   const openCreateDialog = () => {
     setEditingLesson(null)
-    reset({ moduleId, title: '', order: orderedLessons.length + 1, content: [] })
+    reset({ moduleId, title: '', order: orderedLessons.length + 1, content: [], isActive: true })
     setIsDialogOpen(true)
   }
 
   const openEditDialog = (lesson: Lesson) => {
     setEditingLesson(lesson)
-    reset({ moduleId: lesson.moduleId, title: lesson.title, order: lesson.order, content: [] })
+    reset({ moduleId: lesson.moduleId, title: lesson.title, order: lesson.order, content: [], isActive: lesson.isActive !== false })
     setIsDialogOpen(true)
   }
 
@@ -283,6 +286,16 @@ export default function ModuleLessonsPage() {
               {errors.order && (
                 <p className="text-sm text-destructive">{errors.order.message}</p>
               )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isActive"
+                checked={isActive ?? true}
+                onCheckedChange={(checked) => setValue('isActive', checked === true)}
+              />
+              <Label htmlFor="isActive" className="cursor-pointer font-normal">
+                Aula visível para alunos
+              </Label>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

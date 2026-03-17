@@ -19,6 +19,7 @@ import { ArrowLeft, Save, CheckCircle, XCircle, Minus, BarChart3 } from 'lucide-
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useState, useEffect } from 'react'
 import type { ContentBlock, QuizBlock, QuizQuestion } from '@/types'
 import { normalizeLessonContent } from '@/lib/lesson-content'
@@ -35,6 +36,7 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
   const [moduleId, setModuleId] = useState('')
   const [order, setOrder] = useState(1)
   const [content, setContent] = useState<ContentBlock[]>([])
+  const [isActive, setIsActive] = useState(true)
 
   useEffect(() => {
     if (lesson) {
@@ -42,6 +44,7 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
       setModuleId(lesson.moduleId)
       setOrder(lesson.order)
       setContent(normalizeLessonContent(lesson.content || []))
+      setIsActive(lesson.isActive !== false)
     }
   }, [lesson])
 
@@ -49,7 +52,7 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
     try {
       await updateLesson.mutateAsync({
         id,
-        data: { title, moduleId, order, content }
+        data: { title, moduleId, order, content, isActive }
       })
       toast.success('Aula atualizada com sucesso!')
     } catch {
@@ -135,6 +138,16 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
                 value={order}
                 onChange={(e) => setOrder(parseInt(e.target.value) || 1)}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isActive"
+                checked={isActive}
+                onCheckedChange={(checked) => setIsActive(checked === true)}
+              />
+              <Label htmlFor="isActive" className="cursor-pointer font-normal">
+                Aula visível para alunos
+              </Label>
             </div>
           </CardContent>
         </Card>
