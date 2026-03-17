@@ -140,7 +140,8 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <IframeBlockEditor
                   url={block.url}
                   title={block.title}
-                  onChange={(url, title) => updateBlock(index, { type: 'IFRAME', url, title })}
+                  googleDocId={block.googleDocId}
+                  onChange={(url, title, googleDocId) => updateBlock(index, { type: 'IFRAME', url, title, googleDocId })}
                 />
               )}
               {block.type === 'ACTIVITY_CHECKLIST' && (
@@ -420,11 +421,13 @@ function VideoBlockEditor({
 function IframeBlockEditor({
   url,
   title,
+  googleDocId = '',
   onChange,
 }: {
   url: string
   title?: string
-  onChange: (url: string, title?: string) => void
+  googleDocId?: string
+  onChange: (url: string, title?: string, googleDocId?: string) => void
 }) {
   return (
     <Card className="gap-0">
@@ -438,16 +441,33 @@ function IframeBlockEditor({
           <Label>Título (opcional)</Label>
           <Input
             value={title ?? ''}
-            onChange={(e) => onChange(url, e.target.value)}
+            onChange={(e) => onChange(url, e.target.value, googleDocId)}
             placeholder="Ex: Jogo de matemática"
           />
         </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="iframe-google-docs"
+            checked={googleDocId != null}
+            onCheckedChange={(checked) => {
+              if (checked) onChange(url, title, '')
+              else onChange(url, title, undefined)
+            }}
+          />
+          <Label htmlFor="iframe-google-docs" className="cursor-pointer font-normal">
+            Google Docs (incorporar por ID)
+          </Label>
+        </div>
         <div className="space-y-1">
-          <Label>URL para incorporar</Label>
+          <Label>{googleDocId != null ? 'ID do documento Google Docs' : 'URL para incorporar'}</Label>
           <Input
-            value={url}
-            onChange={(e) => onChange(e.target.value, title)}
-            placeholder="https://..."
+            value={googleDocId != null ? (googleDocId || '') : url}
+            onChange={(e) => {
+              const v = e.target.value
+              if (googleDocId != null) onChange(url, title, v)
+              else onChange(v, title, undefined)
+            }}
+            placeholder={googleDocId != null ? 'Ex: 1tsCEo6UW5G6HmQn8eOvLNwuHKpfbxcWyxNgSIBuXThU' : 'https://...'}
           />
         </div>
       </CardContent>

@@ -50,6 +50,8 @@ export interface IframeBlock {
   type: 'IFRAME'
   url: string
   title?: string
+  /** Quando preenchido, usa incorporação do Google Docs (estrutura com ID). */
+  googleDocId?: string
 }
 
 export interface ActivityChecklistBlock {

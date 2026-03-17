@@ -43,7 +43,7 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
         <div key={index}>
           {block.type === 'TEXT' && <TextBlockComponent value={block.value} />}
           {block.type === 'VIDEO' && <VideoBlockComponent url={block.url} title={block.title} isGoogleDrive={block.isGoogleDrive} />}
-          {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} />}
+          {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} googleDocId={block.googleDocId} />}
           {block.type === 'ACTIVITY_CHECKLIST' && (
             <ChecklistBlockComponent title={block.title} items={block.items} />
           )}
