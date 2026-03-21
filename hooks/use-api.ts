@@ -196,6 +196,14 @@ export function useProgress(userId: string) {
 
 export const useUserProgress = useProgress
 
+export function useStudentProgressForAdmin(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['progress', 'admin', userId],
+    queryFn: () => progressApi.getProgressForUser(userId!),
+    enabled: !!userId,
+  })
+}
+
 export const useMarkLessonComplete = useMarkProgress
 
 export function useMarkProgress() {

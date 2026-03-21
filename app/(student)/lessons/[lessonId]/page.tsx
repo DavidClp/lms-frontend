@@ -1,7 +1,14 @@
 'use client'
 
-import { use, useState, useCallback } from 'react'
-import { useLesson, useModule, useUserProgress, useMarkLessonComplete, useStudentModuleAccess } from '@/hooks/use-api'
+import { use, useState, useCallback, useMemo } from 'react'
+import {
+  useLesson,
+  useModule,
+  useModuleLessons,
+  useUserProgress,
+  useMarkLessonComplete,
+  useStudentModuleAccess,
+} from '@/hooks/use-api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
 import { PageHeader } from '@/components/layout/page-header'
@@ -9,7 +16,7 @@ import { BlockRenderer, type QuizResultItem } from '@/components/lessons/block-r
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, CheckCircle, Circle, Lock, ZoomIn, ZoomOut  } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle, Circle, Lock, ZoomIn, ZoomOut } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
@@ -24,6 +31,12 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
   const { data: moduleAccessData } = useStudentModuleAccess(user?.id ?? '')
   const allowedModuleIds = moduleAccessData?.moduleIds ?? []
   const isLocked = !!lesson && !allowedModuleIds.includes(lesson.moduleId)
+  const { data: moduleLessons, isLoading: loadingModuleLessons } = useModuleLessons(
+    lesson?.moduleId ?? '',
+    {
+      enabled: !!lesson?.moduleId && !isLocked,
+    },
+  )
   const markComplete = useMarkLessonComplete()
   const queryClient = useQueryClient()
 
@@ -34,6 +47,17 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
   const ZOOM_STEP = 0.2
 
   const isCompleted = progress?.some(p => p.lessonId === lessonId && p.completed) || false
+
+  const sortedModuleLessons = useMemo(
+    () => [...(moduleLessons ?? [])].sort((a, b) => a.order - b.order),
+    [moduleLessons],
+  )
+
+  const nextLesson = useMemo(() => {
+    const idx = sortedModuleLessons.findIndex((l) => l.id === lessonId)
+    if (idx === -1) return null
+    return sortedModuleLessons[idx + 1] ?? null
+  }, [sortedModuleLessons, lessonId])
 
   const lessonProgress = progress?.find(p => p.lessonId === lessonId)
   const savedOpenAnswers: Record<number, string> = {}
@@ -205,8 +229,8 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
         </div>
       </div>
 
-      {!isCompleted && (
-        <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3">
+        {!isCompleted ? (
           <Button
             size="lg"
             onClick={handleMarkComplete}
@@ -220,8 +244,28 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
             )}
             Marcar como Concluída
           </Button>
-        </div>
-      )}
+        ) : loadingModuleLessons ? (
+          <Spinner className="h-8 w-8" />
+        ) : (
+          <>
+            {nextLesson ? (
+              <Button size="lg" asChild className="gap-2">
+                <Link href={`/lessons/${nextLesson.id}`}>
+                  Próxima aula
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center max-w-md">
+                Você concluiu a última aula deste módulo.
+              </p>
+            )}
+            <Button variant="outline" size="default" asChild>
+              <Link href={`/modules/${lesson.moduleId}`}>Voltar ao módulo</Link>
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

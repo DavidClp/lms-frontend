@@ -371,10 +371,10 @@ function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
                       alt={img.caption ?? ''}
                       className="max-h-full max-w-full w-auto h-auto object-contain pointer-events-none"
                     />
+                  </button>
                   {img.caption && (
                     <p className="text-md">{img.caption}</p>
                   )}
-                  </button>
                 </div>
               )
             })}

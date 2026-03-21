@@ -226,6 +226,8 @@ export const imagesApi = {
 // Progress API
 export const progressApi = {
   getUserProgress: (_userId: string) => fetchApi<Progress[]>(`/progress/user`),
+  /** Somente ADMIN: progresso de outro usuário */
+  getProgressForUser: (userId: string) => fetchApi<Progress[]>(`/progress/user/${userId}`),
   markComplete: (lessonId: string, completed: boolean) =>
     fetchApi<Progress>('/progress', {
       method: 'POST',

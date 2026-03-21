@@ -1,7 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useModules, useStudentModuleAccess, useUpdateStudentModuleAccess } from '@/hooks/use-api'
+import {
+  useUsers,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+  useModules,
+  useLessons,
+  useStudentModuleAccess,
+  useUpdateStudentModuleAccess,
+  useStudentProgressForAdmin,
+} from '@/hooks/use-api'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/layout/empty-state'
 import { UserForm } from '@/components/users/user-form'
@@ -36,7 +46,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Users, MoreHorizontal, Pencil, Trash2, KeyRound } from 'lucide-react'
+import { Plus, Users, MoreHorizontal, Pencil, Trash2, KeyRound, TrendingUp } from 'lucide-react'
+import { StudentProgressView } from '@/components/progress/student-progress-view'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +63,7 @@ import type { User } from '@/types'
 export default function AdminStudentsPage() {
   const { data: users, isLoading } = useUsers()
   const { data: modules } = useModules()
+  const { data: lessons } = useLessons()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
@@ -61,6 +73,11 @@ export default function AdminStudentsPage() {
   const [userToEdit, setUserToEdit] = useState<User | null>(null)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null)
+  const [progressStudent, setProgressStudent] = useState<User | null>(null)
+
+  const { data: studentProgress, isLoading: loadingStudentProgress } = useStudentProgressForAdmin(
+    progressStudent?.id,
+  )
 
   const { data: moduleAccessData } = useStudentModuleAccess(userToEdit?.id ?? '')
   const [editName, setEditName] = useState('')
@@ -229,6 +246,10 @@ export default function AdminStudentsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setProgressStudent(student)}>
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Ver progresso
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setUserToEdit(student)}>
                             <Pencil className="h-4 w-4 mr-2" />
                             Editar
@@ -254,6 +275,38 @@ export default function AdminStudentsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!progressStudent} onOpenChange={(open) => !open && setProgressStudent(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Progresso do aluno</DialogTitle>
+            <DialogDescription>
+              {progressStudent ? (
+                <>
+                  Aulas concluídas e módulos de <span className="font-medium text-foreground">{progressStudent.name}</span>
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          {progressStudent && (
+            <>
+              {loadingStudentProgress ? (
+                <div className="flex justify-center py-12">
+                  <Spinner className="h-8 w-8" />
+                </div>
+              ) : modules && lessons ? (
+                <StudentProgressView
+                  modules={modules}
+                  lessons={lessons}
+                  progress={studentProgress || []}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">Não foi possível carregar módulos ou aulas.</p>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!userToEdit} onOpenChange={() => setUserToEdit(null)}>
