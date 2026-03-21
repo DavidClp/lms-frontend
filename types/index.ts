@@ -44,6 +44,8 @@ export interface VideoBlock {
   title?: string
   /** Se true, a URL é de incorporação do Google Drive (ex.: .../file/d/ID/preview). */
   isGoogleDrive?: boolean
+  /** Início do vídeo em segundos (YouTube). Tem prioridade sobre `t`/`start` na URL. */
+  startSeconds?: number
 }
 
 export interface IframeBlock {

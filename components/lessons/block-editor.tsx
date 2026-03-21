@@ -33,6 +33,7 @@ import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { formatSecondsAsMmSs, parseTimeInputToSeconds } from '@/lib/youtube-start'
 import { Textarea } from '../ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -133,7 +134,14 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   url={block.url}
                   title={block.title}
                   isGoogleDrive={block.isGoogleDrive}
-                  onChange={(url, title, isGoogleDrive) => updateBlock(index, { type: 'VIDEO', url, title, isGoogleDrive })}
+                  startSeconds={block.startSeconds}
+                  onChange={(url, title, isGoogleDrive, startSec) => {
+                    const next = { type: 'VIDEO' as const, url, title, isGoogleDrive: !!isGoogleDrive }
+                    if (typeof startSec === 'number' && !Number.isNaN(startSec) && startSec >= 0) {
+                      Object.assign(next, { startSeconds: Math.floor(startSec) })
+                    }
+                    updateBlock(index, next)
+                  }}
                 />
               )}
               {block.type === 'IFRAME' && (
@@ -372,13 +380,40 @@ function VideoBlockEditor({
   url,
   title,
   isGoogleDrive = false,
+  startSeconds,
   onChange,
 }: {
   url: string
   title?: string
   isGoogleDrive?: boolean
-  onChange: (url: string, title?: string, isGoogleDrive?: boolean) => void
+  startSeconds?: number
+  onChange: (
+    url: string,
+    title?: string,
+    isGoogleDrive?: boolean,
+    startSeconds?: number,
+  ) => void
 }) {
+  const [startDraft, setStartDraft] = useState(() =>
+    startSeconds != null && startSeconds >= 0 ? formatSecondsAsMmSs(startSeconds) : '',
+  )
+
+  useEffect(() => {
+    setStartDraft(startSeconds != null && startSeconds >= 0 ? formatSecondsAsMmSs(startSeconds) : '')
+  }, [startSeconds])
+
+  const commitStartDraft = () => {
+    const trimmed = startDraft.trim()
+    if (!trimmed) {
+      onChange(url, title, isGoogleDrive, undefined)
+      return
+    }
+    const sec = parseTimeInputToSeconds(trimmed)
+    if (sec !== undefined) onChange(url, title, isGoogleDrive, sec)
+    else
+      setStartDraft(startSeconds != null && startSeconds >= 0 ? formatSecondsAsMmSs(startSeconds) : '')
+  }
+
   return (
     <Card className='gap-0'>
       <CardHeader className="pb-2">
@@ -391,7 +426,7 @@ function VideoBlockEditor({
           <Checkbox
             id="video-google-drive"
             checked={isGoogleDrive}
-            onCheckedChange={(checked) => onChange(url, title, checked === true)}
+            onCheckedChange={(checked) => onChange(url, title, checked === true, startSeconds)}
           />
           <Label htmlFor="video-google-drive" className="cursor-pointer font-normal">
             Google Drive
@@ -401,7 +436,7 @@ function VideoBlockEditor({
           <Label>Título (opcional)</Label>
           <Input
             value={title ?? ''}
-            onChange={(e) => onChange(url, e.target.value, isGoogleDrive)}
+            onChange={(e) => onChange(url, e.target.value, isGoogleDrive, startSeconds)}
             placeholder="Título do vídeo"
           />
         </div>
@@ -409,10 +444,33 @@ function VideoBlockEditor({
           <Label>{isGoogleDrive ? 'URL de incorporação do Google Drive' : 'URL do YouTube'}</Label>
           <Input
             value={url}
-            onChange={(e) => onChange(e.target.value, title, isGoogleDrive)}
+            onChange={(e) => onChange(e.target.value, title, isGoogleDrive, startSeconds)}
             placeholder={isGoogleDrive ? 'https://drive.google.com/file/d/.../preview' : 'https://www.youtube.com/watch?v=...'}
           />
         </div>
+        {!isGoogleDrive && (
+          <div className="space-y-1">
+            <Label>Início (opcional)</Label>
+            <Input
+              value={startDraft}
+              onChange={(e) => setStartDraft(e.target.value)}
+              onBlur={commitStartDraft}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  commitStartDraft()
+                  ;(e.target as HTMLInputElement).blur()
+                }
+              }}
+              placeholder="ex: 1:23 ou 83"
+            />
+            <p className="text-xs text-muted-foreground">
+              Tempo em que o vídeo começa (YouTube). Se vazio, também vale{' '}
+              <span className="font-mono text-[11px]">&amp;t=</span> ou{' '}
+              <span className="font-mono text-[11px]">&amp;start=</span> na URL.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

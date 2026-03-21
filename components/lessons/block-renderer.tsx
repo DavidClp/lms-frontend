@@ -11,6 +11,7 @@ import { normalizeImagesBlock } from '@/types'
 import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { getYouTubeStartSeconds } from '@/lib/youtube-start'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
@@ -42,7 +43,14 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
       {blocks?.map((block, index) => (
         <div key={index}>
           {block.type === 'TEXT' && <TextBlockComponent value={block.value} />}
-          {block.type === 'VIDEO' && <VideoBlockComponent url={block.url} title={block.title} isGoogleDrive={block.isGoogleDrive} />}
+          {block.type === 'VIDEO' && (
+            <VideoBlockComponent
+              url={block.url}
+              title={block.title}
+              isGoogleDrive={block.isGoogleDrive}
+              startSeconds={block.startSeconds}
+            />
+          )}
           {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} googleDocId={block.googleDocId} />}
           {block.type === 'ACTIVITY_CHECKLIST' && (
             <ChecklistBlockComponent title={block.title} items={block.items} />
@@ -107,11 +115,22 @@ function getYouTubeVideoId(videoUrl: string): string | null {
   return match && match[2].length === 11 ? match[2] : null
 }
 
-function VideoBlockComponent({ url, title, isGoogleDrive }: { url: string; title?: string; isGoogleDrive?: boolean }) {
+function VideoBlockComponent({
+  url,
+  title,
+  isGoogleDrive,
+  startSeconds: startSecondsProp,
+}: {
+  url: string
+  title?: string
+  isGoogleDrive?: boolean
+  startSeconds?: number
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<unknown>(null)
   const videoId = getYouTubeVideoId(url)
   const isYouTube = !isGoogleDrive && videoId !== null
+  const startAt = isYouTube ? getYouTubeStartSeconds(url, startSecondsProp) : 0
 
   useEffect(() => {
     if (!isYouTube || !containerRef.current || !videoId) return
@@ -128,6 +147,7 @@ function VideoBlockComponent({ url, title, isGoogleDrive }: { url: string; title
           modestbranding: 1,
           rel: 0,
           iv_load_policy: 3,
+          ...(startAt > 0 ? { start: startAt } : {}),
         },
         events: {
           onReady: (event: { target: { setPlaybackQuality?: (q: string) => void } }) => {
@@ -180,9 +200,9 @@ function VideoBlockComponent({ url, title, isGoogleDrive }: { url: string; title
         playerRef.current = null
       }
     }
-  }, [videoId, isYouTube])
+  }, [videoId, isYouTube, startAt])
 
-  const getEmbedUrl = (videoUrl: string) => {
+  const getEmbedUrl = (videoUrl: string, start: number) => {
     const id = getYouTubeVideoId(videoUrl)
     if (id) {
       const params = new URLSearchParams({
@@ -190,12 +210,13 @@ function VideoBlockComponent({ url, title, isGoogleDrive }: { url: string; title
         rel: '0',
         iv_load_policy: '3',
       })
+      if (start > 0) params.set('start', String(start))
       return `https://www.youtube.com/embed/${id}?${params.toString()}`
     }
     return videoUrl
   }
 
-  const embedUrl = isGoogleDrive ? url.trim() : getEmbedUrl(url)
+  const embedUrl = isGoogleDrive ? url.trim() : getEmbedUrl(url, startAt)
 
   return (
     <Card className='gap-0'>
