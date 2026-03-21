@@ -135,10 +135,14 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   title={block.title}
                   isGoogleDrive={block.isGoogleDrive}
                   startSeconds={block.startSeconds}
-                  onChange={(url, title, isGoogleDrive, startSec) => {
+                  endSeconds={block.endSeconds}
+                  onChange={(url, title, isGoogleDrive, startSec, endSec) => {
                     const next = { type: 'VIDEO' as const, url, title, isGoogleDrive: !!isGoogleDrive }
                     if (typeof startSec === 'number' && !Number.isNaN(startSec) && startSec >= 0) {
-                      Object.assign(next, { startSeconds: Math.floor(startSec) })
+                      next.startSeconds = Math.floor(startSec)
+                    }
+                    if (typeof endSec === 'number' && !Number.isNaN(endSec) && endSec >= 0) {
+                      next.endSeconds = Math.floor(endSec)
                     }
                     updateBlock(index, next)
                   }}
@@ -381,37 +385,58 @@ function VideoBlockEditor({
   title,
   isGoogleDrive = false,
   startSeconds,
+  endSeconds,
   onChange,
 }: {
   url: string
   title?: string
   isGoogleDrive?: boolean
   startSeconds?: number
+  endSeconds?: number
   onChange: (
     url: string,
     title?: string,
     isGoogleDrive?: boolean,
     startSeconds?: number,
+    endSeconds?: number,
   ) => void
 }) {
   const [startDraft, setStartDraft] = useState(() =>
     startSeconds != null && startSeconds >= 0 ? formatSecondsAsMmSs(startSeconds) : '',
+  )
+  const [endDraft, setEndDraft] = useState(() =>
+    endSeconds != null && endSeconds >= 0 ? formatSecondsAsMmSs(endSeconds) : '',
   )
 
   useEffect(() => {
     setStartDraft(startSeconds != null && startSeconds >= 0 ? formatSecondsAsMmSs(startSeconds) : '')
   }, [startSeconds])
 
+  useEffect(() => {
+    setEndDraft(endSeconds != null && endSeconds >= 0 ? formatSecondsAsMmSs(endSeconds) : '')
+  }, [endSeconds])
+
   const commitStartDraft = () => {
     const trimmed = startDraft.trim()
     if (!trimmed) {
-      onChange(url, title, isGoogleDrive, undefined)
+      onChange(url, title, isGoogleDrive, undefined, endSeconds)
       return
     }
     const sec = parseTimeInputToSeconds(trimmed)
-    if (sec !== undefined) onChange(url, title, isGoogleDrive, sec)
+    if (sec !== undefined) onChange(url, title, isGoogleDrive, sec, endSeconds)
     else
       setStartDraft(startSeconds != null && startSeconds >= 0 ? formatSecondsAsMmSs(startSeconds) : '')
+  }
+
+  const commitEndDraft = () => {
+    const trimmed = endDraft.trim()
+    if (!trimmed) {
+      onChange(url, title, isGoogleDrive, startSeconds, undefined)
+      return
+    }
+    const sec = parseTimeInputToSeconds(trimmed)
+    if (sec !== undefined) onChange(url, title, isGoogleDrive, startSeconds, sec)
+    else setEndDraft(endSeconds != null && endSeconds >= 0 ? formatSecondsAsMmSs(endSeconds) : '')
   }
 
   return (
@@ -426,7 +451,7 @@ function VideoBlockEditor({
           <Checkbox
             id="video-google-drive"
             checked={isGoogleDrive}
-            onCheckedChange={(checked) => onChange(url, title, checked === true, startSeconds)}
+            onCheckedChange={(checked) => onChange(url, title, checked === true, startSeconds, endSeconds)}
           />
           <Label htmlFor="video-google-drive" className="cursor-pointer font-normal">
             Google Drive
@@ -436,7 +461,7 @@ function VideoBlockEditor({
           <Label>Título (opcional)</Label>
           <Input
             value={title ?? ''}
-            onChange={(e) => onChange(url, e.target.value, isGoogleDrive, startSeconds)}
+            onChange={(e) => onChange(url, e.target.value, isGoogleDrive, startSeconds, endSeconds)}
             placeholder="Título do vídeo"
           />
         </div>
@@ -444,32 +469,53 @@ function VideoBlockEditor({
           <Label>{isGoogleDrive ? 'URL de incorporação do Google Drive' : 'URL do YouTube'}</Label>
           <Input
             value={url}
-            onChange={(e) => onChange(e.target.value, title, isGoogleDrive, startSeconds)}
+            onChange={(e) => onChange(e.target.value, title, isGoogleDrive, startSeconds, endSeconds)}
             placeholder={isGoogleDrive ? 'https://drive.google.com/file/d/.../preview' : 'https://www.youtube.com/watch?v=...'}
           />
         </div>
         {!isGoogleDrive && (
-          <div className="space-y-1">
-            <Label>Início (opcional)</Label>
-            <Input
-              value={startDraft}
-              onChange={(e) => setStartDraft(e.target.value)}
-              onBlur={commitStartDraft}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  commitStartDraft()
-                  ;(e.target as HTMLInputElement).blur()
-                }
-              }}
-              placeholder="ex: 1:23 ou 83"
-            />
-            <p className="text-xs text-muted-foreground">
-              Tempo em que o vídeo começa (YouTube). Se vazio, também vale{' '}
-              <span className="font-mono text-[11px]">&amp;t=</span> ou{' '}
-              <span className="font-mono text-[11px]">&amp;start=</span> na URL.
-            </p>
-          </div>
+          <>
+            <div className="space-y-1">
+              <Label>Início (opcional)</Label>
+              <Input
+                value={startDraft}
+                onChange={(e) => setStartDraft(e.target.value)}
+                onBlur={commitStartDraft}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    commitStartDraft()
+                    ;(e.target as HTMLInputElement).blur()
+                  }
+                }}
+                placeholder="ex: 1:23 ou 83"
+              />
+              <p className="text-xs text-muted-foreground">
+                Tempo em que o vídeo começa (YouTube). Se vazio, também vale{' '}
+                <span className="font-mono text-[11px]">&amp;t=</span> ou{' '}
+                <span className="font-mono text-[11px]">&amp;start=</span> na URL.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label>Fim (opcional)</Label>
+              <Input
+                value={endDraft}
+                onChange={(e) => setEndDraft(e.target.value)}
+                onBlur={commitEndDraft}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    commitEndDraft()
+                    ;(e.target as HTMLInputElement).blur()
+                  }
+                }}
+                placeholder="ex: 5:00 ou 300"
+              />
+              <p className="text-xs text-muted-foreground">
+                O player para nesse instante (tempo absoluto do vídeo, desde o começo). Precisa ser maior que o início.
+              </p>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

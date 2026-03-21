@@ -46,6 +46,8 @@ export interface VideoBlock {
   isGoogleDrive?: boolean
   /** Início do vídeo em segundos (YouTube). Tem prioridade sobre `t`/`start` na URL. */
   startSeconds?: number
+  /** Fim da reprodução em segundos desde o início do vídeo (YouTube). Deve ser maior que o início. */
+  endSeconds?: number
 }
 
 export interface IframeBlock {

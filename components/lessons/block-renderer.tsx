@@ -49,6 +49,7 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
               title={block.title}
               isGoogleDrive={block.isGoogleDrive}
               startSeconds={block.startSeconds}
+              endSeconds={block.endSeconds}
             />
           )}
           {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} googleDocId={block.googleDocId} />}
@@ -120,17 +121,25 @@ function VideoBlockComponent({
   title,
   isGoogleDrive,
   startSeconds: startSecondsProp,
+  endSeconds: endSecondsProp,
 }: {
   url: string
   title?: string
   isGoogleDrive?: boolean
   startSeconds?: number
+  endSeconds?: number
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<unknown>(null)
   const videoId = getYouTubeVideoId(url)
   const isYouTube = !isGoogleDrive && videoId !== null
   const startAt = isYouTube ? getYouTubeStartSeconds(url, startSecondsProp) : 0
+  const endRaw =
+    typeof endSecondsProp === 'number' && !Number.isNaN(endSecondsProp) && endSecondsProp >= 0
+      ? Math.floor(endSecondsProp)
+      : 0
+  /** YouTube exige fim > início; ambos em segundos desde o começo do vídeo. */
+  const endAt = endRaw > startAt ? endRaw : 0
 
   useEffect(() => {
     if (!isYouTube || !containerRef.current || !videoId) return
@@ -148,6 +157,7 @@ function VideoBlockComponent({
           rel: 0,
           iv_load_policy: 3,
           ...(startAt > 0 ? { start: startAt } : {}),
+          ...(endAt > 0 ? { end: endAt } : {}),
         },
         events: {
           onReady: (event: { target: { setPlaybackQuality?: (q: string) => void } }) => {
@@ -200,9 +210,9 @@ function VideoBlockComponent({
         playerRef.current = null
       }
     }
-  }, [videoId, isYouTube, startAt])
+  }, [videoId, isYouTube, startAt, endAt])
 
-  const getEmbedUrl = (videoUrl: string, start: number) => {
+  const getEmbedUrl = (videoUrl: string, start: number, end: number) => {
     const id = getYouTubeVideoId(videoUrl)
     if (id) {
       const params = new URLSearchParams({
@@ -211,12 +221,13 @@ function VideoBlockComponent({
         iv_load_policy: '3',
       })
       if (start > 0) params.set('start', String(start))
+      if (end > 0) params.set('end', String(end))
       return `https://www.youtube.com/embed/${id}?${params.toString()}`
     }
     return videoUrl
   }
 
-  const embedUrl = isGoogleDrive ? url.trim() : getEmbedUrl(url, startAt)
+  const embedUrl = isGoogleDrive ? url.trim() : getEmbedUrl(url, startAt, endAt)
 
   return (
     <Card className='gap-0'>
