@@ -31,7 +31,15 @@ export interface Lesson {
   updatedAt?: string
 }
 
-export type BlockType = 'TEXT' | 'VIDEO' | 'ACTIVITY_CHECKLIST' | 'QUIZ' | 'IMAGES' | 'OPEN_QUESTION' | 'IFRAME'
+export type BlockType =
+  | 'TEXT'
+  | 'VIDEO'
+  | 'ACTIVITY_CHECKLIST'
+  | 'QUIZ'
+  | 'IMAGES'
+  | 'OPEN_QUESTION'
+  | 'IFRAME'
+  | 'TABLE'
 
 export interface TextBlock {
   type: 'TEXT'
@@ -122,7 +130,26 @@ export interface OpenQuestionBlock {
   question: string
 }
 
-export type ContentBlock = TextBlock | VideoBlock | IframeBlock | ActivityChecklistBlock | QuizBlock | ImagesBlock | OpenQuestionBlock
+/** Tabela de conteúdo (células em texto simples) */
+export interface TableBlock {
+  type: 'TABLE'
+  /** Título opcional acima da tabela */
+  caption?: string
+  /** Linha de cabeçalho. Se vazia, a tabela só tem corpo. */
+  headers: string[]
+  /** Linhas de dados; cada linha deve ter o mesmo número de colunas que `headers` (ou uma largura mínima). */
+  rows: string[][]
+}
+
+export type ContentBlock =
+  | TextBlock
+  | VideoBlock
+  | IframeBlock
+  | ActivityChecklistBlock
+  | QuizBlock
+  | ImagesBlock
+  | OpenQuestionBlock
+  | TableBlock
 
 /** Resultados do quiz por bloco (índice): lista de acerto/erro por pergunta */
 export type QuizResultsByBlock = Record<string, { questionId: string; correct: boolean }[]>

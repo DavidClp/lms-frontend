@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout } from 'lucide-react'
-import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock } from '@/types'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2 } from 'lucide-react'
+import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -49,6 +49,20 @@ function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
   if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true, imageLayout: 'column' }
   if (type === 'OPEN_QUESTION') return { type: 'OPEN_QUESTION', question: '' }
+  if (type === 'TABLE')
+    return {
+      type: 'TABLE',
+      caption: '',
+      headers: ['Extensão', 'Tipo de arquivo', 'Aberto com'],
+      rows: [
+        ['.docx', 'Documento de texto (Word)', 'Microsoft Word, LibreOffice'],
+        ['.pdf', 'Documento portátil (não editável)', 'Adobe Reader, navegador'],
+        ['.txt', 'Texto simples', 'Bloco de Notas'],
+        ['.jpg / .jpeg', 'Foto ou imagem', 'Visualizador de Fotos'],
+        ['.png', 'Imagem (com fundo transparente)', 'Visualizador de Fotos'],
+        ['.mp3', 'Música / áudio', 'Windows Media Player'],
+      ],
+    }
   return {
     type: 'QUIZ',
     questions: [{
@@ -139,9 +153,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   onChange={(url, title, isGoogleDrive, startSec, endSec) => {
                     const next = { type: 'VIDEO' as const, url, title, isGoogleDrive: !!isGoogleDrive }
                     if (typeof startSec === 'number' && !Number.isNaN(startSec) && startSec >= 0) {
+                      // @ts-ignore
                       next.startSeconds = Math.floor(startSec)
                     }
                     if (typeof endSec === 'number' && !Number.isNaN(endSec) && endSec >= 0) {
+                      // @ts-ignore
                       next.endSeconds = Math.floor(endSec)
                     }
                     updateBlock(index, next)
@@ -202,6 +218,12 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   }
                 />
               )}
+              {block.type === 'TABLE' && (
+                <TableBlockEditor
+                  block={block}
+                  onChange={(updated) => updateBlock(index, updated)}
+                />
+              )}
             </SortableBlockItem>
           ))}
         </SortableContext>
@@ -248,6 +270,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <PenLine className="h-4 w-4" /> Pergunta (resposta em texto)
               </div>
             </SelectItem>
+            <SelectItem value="TABLE">
+              <div className="flex items-center gap-2">
+                <Table2 className="h-4 w-4" /> Tabela
+              </div>
+            </SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={addBlock} disabled={!addingType} variant="outline">
@@ -268,6 +295,7 @@ const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: React.ReactNo
   { value: 'QUIZ', label: 'Quiz', icon: <HelpCircle className="h-4 w-4" /> },
   { value: 'IMAGES', label: 'Imagens', icon: <ImageIcon className="h-4 w-4" /> },
   { value: 'OPEN_QUESTION', label: 'Pergunta (texto)', icon: <PenLine className="h-4 w-4" /> },
+  { value: 'TABLE', label: 'Tabela', icon: <Table2 className="h-4 w-4" /> },
 ]
 
 function SortableBlockItem({
@@ -602,6 +630,171 @@ function OpenQuestionBlockEditor({
             placeholder="Digite a pergunta que o aluno deve responder..."
             rows={3}
           />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function getTableColumnCount(block: TableBlock): number {
+  const rowMax = block.rows.reduce((m, r) => Math.max(m, r.length), 0)
+  return Math.max(block.headers.length, rowMax, 1)
+}
+
+function padTableRows(block: TableBlock): { headers: string[]; rows: string[][]; cols: number; hasHeader: boolean } {
+  const hasHeader = block.headers.length > 0
+  const cols = getTableColumnCount(block)
+  const headers = hasHeader
+    ? Array.from({ length: cols }, (_, i) => block.headers[i] ?? '')
+    : []
+  let rows = block.rows.map((r) => Array.from({ length: cols }, (_, i) => r[i] ?? ''))
+  if (rows.length === 0) rows = [Array.from({ length: cols }, () => '')]
+  return { headers, rows, cols, hasHeader }
+}
+
+function TableBlockEditor({
+  block,
+  onChange,
+}: {
+  block: TableBlock
+  onChange: (b: TableBlock) => void
+}) {
+  const { headers, rows, cols, hasHeader } = padTableRows(block)
+
+  const commit = (next: TableBlock) => {
+    const c = getTableColumnCount(next)
+    const h =
+      next.headers.length > 0
+        ? Array.from({ length: c }, (_, i) => next.headers[i] ?? '')
+        : []
+    const rs = next.rows.map((r) => Array.from({ length: c }, (_, i) => r[i] ?? ''))
+    onChange({ ...next, headers: h, rows: rs.length ? rs : [Array.from({ length: c }, () => '')] })
+  }
+
+  const setCaption = (caption: string) => commit({ ...block, caption: caption || undefined })
+
+  const setHeaderCell = (col: number, value: string) => {
+    const nextHeaders = headers.map((cell, i) => (i === col ? value : cell))
+    commit({ ...block, headers: nextHeaders })
+  }
+
+  const setBodyCell = (row: number, col: number, value: string) => {
+    const nextRows = rows.map((r, ri) =>
+      ri === row ? r.map((c, ci) => (ci === col ? value : c)) : r
+    )
+    commit({ ...block, rows: nextRows })
+  }
+
+  const addColumn = () => {
+    const newCols = cols + 1
+    const h = hasHeader ? [...headers, ''] : []
+    const rs = rows.map((r) => [...r, ''])
+    commit({ ...block, headers: h, rows: rs })
+  }
+
+  const removeColumn = () => {
+    if (cols <= 1) return
+    const newCols = cols - 1
+    const h = hasHeader ? headers.slice(0, newCols) : []
+    const rs = rows.map((r) => r.slice(0, newCols))
+    commit({ ...block, headers: h, rows: rs })
+  }
+
+  const addRow = () => {
+    commit({ ...block, rows: [...rows, Array.from({ length: cols }, () => '')] })
+  }
+
+  const removeRow = (rowIndex: number) => {
+    if (rows.length <= 1) return
+    commit({ ...block, rows: rows.filter((_, i) => i !== rowIndex) })
+  }
+
+  const toggleHeader = () => {
+    if (hasHeader) {
+      commit({ ...block, headers: [] })
+    } else {
+      commit({ ...block, headers: Array.from({ length: cols }, () => '') })
+    }
+  }
+
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Table2 className="h-4 w-4" /> Tabela
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <Label>Título (opcional)</Label>
+          <Input
+            value={block.caption ?? ''}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="Ex.: Tipos de arquivo e programas"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={toggleHeader}>
+            {hasHeader ? 'Remover linha de cabeçalho' : 'Adicionar linha de cabeçalho'}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={addColumn}>
+            <Plus className="h-4 w-4 mr-1" /> Coluna
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={removeColumn} disabled={cols <= 1}>
+            Remover coluna
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            <Plus className="h-4 w-4 mr-1" /> Linha
+          </Button>
+        </div>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full min-w-[480px] border-collapse text-sm">
+            {hasHeader && (
+              <thead>
+                <tr className="bg-muted/60">
+                  {headers.map((cell, col) => (
+                    <th key={col} className="border p-1 align-top font-medium">
+                      <Input
+                        className="h-8 min-w-[100px] border-0 bg-transparent shadow-none focus-visible:ring-1"
+                        value={cell}
+                        onChange={(e) => setHeaderCell(col, e.target.value)}
+                        placeholder={`Coluna ${col + 1}`}
+                      />
+                    </th>
+                  ))}
+                  <th className="w-10 border bg-muted/60 p-1" aria-hidden />
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-muted/20">
+                  {row.map((cell, col) => (
+                    <td key={col} className="border p-1 align-top">
+                      <Input
+                        className="h-8 min-w-[100px] border-0 bg-transparent shadow-none focus-visible:ring-1"
+                        value={cell}
+                        onChange={(e) => setBodyCell(rowIndex, col, e.target.value)}
+                        placeholder="—"
+                      />
+                    </td>
+                  ))}
+                  <td className="border-0 w-10 p-1 align-middle">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn('h-8 w-8', rows.length <= 1 && 'invisible pointer-events-none')}
+                      onClick={() => removeRow(rowIndex)}
+                      title="Remover linha"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </CardContent>
     </Card>

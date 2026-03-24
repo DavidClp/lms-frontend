@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock } from '@/types'
+import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
-import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw } from 'lucide-react'
+import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw, Table2 } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { getYouTubeStartSeconds } from '@/lib/youtube-start'
@@ -76,9 +76,58 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
               onSave={onSaveOpenQuestion}
             />
           )}
+          {block.type === 'TABLE' && <TableBlockComponent block={block} />}
         </div>
       ))}
     </div>
+  )
+}
+
+function TableBlockComponent({ block }: { block: TableBlock }) {
+  const rowMax = block.rows.reduce((m, r) => Math.max(m, r.length), 0)
+  const cols = Math.max(block.headers.length, rowMax, 1)
+  const headers =
+    block.headers.length > 0 ? Array.from({ length: cols }, (_, i) => block.headers[i] ?? '') : []
+  const rows = block.rows.map((r) => Array.from({ length: cols }, (_, i) => r[i] ?? ''))
+  if (rows.length === 0) return null
+
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Table2 className="h-5 w-5 text-primary shrink-0" />
+          {block.caption || 'Tabela'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 px-3 pb-3">
+        <div className="overflow-x-auto rounded-lg border bg-card">
+          <table className="w-full min-w-[min(100%,480px)] border-collapse text-sm">
+            {headers.length > 0 && (
+              <thead>
+                <tr className="bg-muted/60">
+                  {headers.map((h, i) => (
+                    <th key={i} className="border px-3 py-2 text-left font-semibold">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr key={ri} className="odd:bg-muted/25">
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="border px-3 py-2 align-top whitespace-pre-wrap">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
