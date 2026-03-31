@@ -18,6 +18,9 @@ export default function ModuleDetailPage({ params }: { params: Promise<{ id: str
   const { data: lessons } = useModuleLessons(id)
   const updateModule = useUpdateModule()
 
+  const lessonCount = (lessons ?? []).filter((l) => (l.kind ?? 'LESSON') === 'LESSON').length
+  const examCount = (lessons ?? []).filter((l) => (l.kind ?? 'LESSON') === 'EXAM').length
+
   const handleUpdate = async (data: Partial<Module>) => {
     try {
       await updateModule.mutateAsync({ id, data })
@@ -87,12 +90,31 @@ export default function ModuleDetailPage({ params }: { params: Promise<{ id: str
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{lessons?.length || 0}</div>
+              <div className="text-3xl font-bold">{lessonCount}</div>
               <p className="text-sm text-muted-foreground">aulas neste módulo</p>
               <Button asChild className="w-full mt-4" variant="outline">
                 <Link href={`/admin/modules/${id}/lessons`}>
                   <BookOpen className="h-4 w-4 mr-2" />
                   Gerenciar Aulas
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" />
+                Provas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{examCount}</div>
+              <p className="text-sm text-muted-foreground">provas neste módulo</p>
+              <Button asChild className="w-full mt-4" variant="outline">
+                <Link href={`/admin/modules/${id}/lessons?kind=EXAM`}>
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Gerenciar Provas
                 </Link>
               </Button>
             </CardContent>

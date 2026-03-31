@@ -24,6 +24,7 @@ export interface Lesson {
   moduleId: string
   title: string
   order: number
+  kind?: 'LESSON' | 'EXAM'
   content: ContentBlock[]
   isActive?: boolean
   module?: Module
@@ -222,6 +223,7 @@ export interface LessonFormData {
   moduleId: string
   title: string
   order: number
+  kind?: 'LESSON' | 'EXAM'
   content: ContentBlock[]
   isActive?: boolean
 }

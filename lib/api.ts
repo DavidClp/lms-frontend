@@ -143,7 +143,11 @@ export const modulesApi = {
     fetchApi<void>(`/modules/${id}`, {
       method: 'DELETE',
     }),
-  getLessons: (id: string) => fetchApi<Lesson[]>(`/modules/${id}/lessons`),
+  getLessons: (id: string, options?: { kind?: 'LESSON' | 'EXAM' }) => {
+    const kind = options?.kind
+    const qs = kind ? `?kind=${encodeURIComponent(kind)}` : ''
+    return fetchApi<Lesson[]>(`/modules/${id}/lessons${qs}`)
+  },
 }
 
 // Lessons API

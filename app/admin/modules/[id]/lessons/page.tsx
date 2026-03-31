@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { Plus, ArrowLeft, Edit, Trash2, GripVertical, FileText } from 'lucide-react'
@@ -56,6 +56,7 @@ interface CreateLessonData {
   moduleId: string
   title: string
   order: number
+  kind?: 'LESSON' | 'EXAM'
   content: never[]
   isActive?: boolean
 }
@@ -63,10 +64,15 @@ interface CreateLessonData {
 export default function ModuleLessonsPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const moduleId = params.id as string
+  const kindParam = searchParams.get('kind')
+  const kind: 'LESSON' | 'EXAM' = kindParam === 'EXAM' ? 'EXAM' : 'LESSON'
+  const kindLabel = kind === 'EXAM' ? 'Provas' : 'Aulas'
+  const kindLabelSingular = kind === 'EXAM' ? 'Prova' : 'Aula'
 
   const { data: module, isLoading: moduleLoading } = useModule(moduleId)
-  const { data: lessons = [], isLoading: lessonsLoading } = useModuleLessons(moduleId)
+  const { data: lessons = [], isLoading: lessonsLoading } = useModuleLessons(moduleId, { kind })
   const createLesson = useCreateLesson()
   const updateLesson = useUpdateLesson()
   const deleteLesson = useDeleteLesson()
@@ -76,9 +82,10 @@ export default function ModuleLessonsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
   const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null)
+  const [dialogKind, setDialogKind] = useState<'LESSON' | 'EXAM'>(kind)
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CreateLessonData>({
-    defaultValues: { moduleId, title: '', order: 1, content: [], isActive: true }
+    defaultValues: { moduleId, title: '', order: 1, kind, content: [], isActive: true }
   })
   const isActive = watch('isActive')
 
@@ -128,31 +135,38 @@ export default function ModuleLessonsPage() {
     }
   }
 
-  const openCreateDialog = () => {
+  const openCreateDialog = (createKind: 'LESSON' | 'EXAM' = kind) => {
     setEditingLesson(null)
-    reset({ moduleId, title: '', order: orderedLessons.length + 1, content: [], isActive: true })
+    setDialogKind(createKind)
+    reset({ moduleId, title: '', order: orderedLessons.length + 1, kind: createKind, content: [], isActive: true })
     setIsDialogOpen(true)
   }
 
   const openEditDialog = (lesson: Lesson) => {
     setEditingLesson(lesson)
-    reset({ moduleId: lesson.moduleId, title: lesson.title, order: lesson.order, content: [], isActive: lesson.isActive !== false })
+    setDialogKind((lesson.kind ?? 'LESSON') as 'LESSON' | 'EXAM')
+    reset({ moduleId: lesson.moduleId, title: lesson.title, order: lesson.order, kind: (lesson.kind ?? 'LESSON'), content: [], isActive: lesson.isActive !== false })
     setIsDialogOpen(true)
   }
 
   const onSubmit = async (data: CreateLessonData) => {
+    const activeKind = (data.kind ?? dialogKind) as 'LESSON' | 'EXAM'
+    const activeKindLabel = activeKind === 'EXAM' ? 'Prova' : 'Aula'
     try {
       if (editingLesson) {
         await updateLesson.mutateAsync({ id: editingLesson.id, data })
-        toast.success('Aula atualizada com sucesso!')
+        toast.success(`${activeKindLabel} atualizada com sucesso!`)
       } else {
         await createLesson.mutateAsync(data)
-        toast.success('Aula criada com sucesso!')
+        toast.success(`${activeKindLabel} criada com sucesso!`)
+        if (activeKind !== kind) {
+          router.push(`/admin/modules/${moduleId}/lessons?kind=${activeKind}`)
+        }
       }
       setIsDialogOpen(false)
       reset()
     } catch {
-      toast.error('Erro ao salvar aula')
+      toast.error(`Erro ao salvar ${activeKindLabel.toLowerCase()}`)
     }
   }
 
@@ -160,10 +174,10 @@ export default function ModuleLessonsPage() {
     if (!deletingLessonId) return
     try {
       await deleteLesson.mutateAsync(deletingLessonId)
-      toast.success('Aula excluída com sucesso!')
+      toast.success(`${kindLabelSingular} excluída com sucesso!`)
       setDeletingLessonId(null)
     } catch {
-      toast.error('Erro ao excluir aula')
+      toast.error(`Erro ao excluir ${kindLabelSingular.toLowerCase()}`)
     }
   }
 
@@ -195,25 +209,31 @@ export default function ModuleLessonsPage() {
           </Link>
         </Button>
         <PageHeader
-          title={`Aulas: ${module.title}`}
-          description="Gerencie as aulas deste módulo"
+          title={`${kindLabel}: ${module.title}`}
+          description={`Gerencie as ${kindLabel.toLowerCase()} deste módulo`}
         >
-          <Button onClick={openCreateDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Aula
-          </Button>
+          <div className="flex gap-2">
+            <Button variant={kind === 'LESSON' ? 'default' : 'outline'} onClick={() => openCreateDialog('LESSON')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Aula
+            </Button>
+            <Button variant={kind === 'EXAM' ? 'default' : 'outline'} onClick={() => openCreateDialog('EXAM')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Prova
+            </Button>
+          </div>
         </PageHeader>
       </div>
 
       {orderedLessons.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="Nenhuma aula cadastrada"
-          description="Este módulo ainda não possui aulas. Comece criando a primeira."
+          title={`Nenhuma ${kindLabelSingular.toLowerCase()} cadastrada`}
+          description={`Este módulo ainda não possui ${kindLabel.toLowerCase()}. Comece criando a primeira.`}
           action={
-            <Button onClick={openCreateDialog}>
+            <Button onClick={() => openCreateDialog()}>
               <Plus className="mr-2 h-4 w-4" />
-              Criar Primeira Aula
+              {`Criar Primeira ${kindLabelSingular}`}
             </Button>
           }
         />
@@ -221,11 +241,11 @@ export default function ModuleLessonsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              Lista de Aulas
+              {`Lista de ${kindLabel}`}
               {isSavingOrder && <Spinner className="h-4 w-4" />}
             </CardTitle>
             <CardDescription>
-              {orderedLessons.length} {orderedLessons.length === 1 ? 'aula' : 'aulas'} — arraste para reordenar
+              {orderedLessons.length} {orderedLessons.length === 1 ? kindLabelSingular.toLowerCase() : kindLabel.toLowerCase()} — arraste para reordenar
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -252,11 +272,11 @@ export default function ModuleLessonsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingLesson ? 'Editar Aula' : 'Nova Aula'}</DialogTitle>
+            <DialogTitle>{editingLesson ? `Editar ${dialogKind === 'EXAM' ? 'Prova' : 'Aula'}` : `Nova ${dialogKind === 'EXAM' ? 'Prova' : 'Aula'}`}</DialogTitle>
             <DialogDescription>
               {editingLesson
-                ? 'Atualize as informações básicas da aula'
-                : 'Adicione uma nova aula a este módulo'}
+                ? `Atualize as informações básicas da ${(dialogKind === 'EXAM' ? 'prova' : 'aula')}`
+                : `Adicione uma nova ${(dialogKind === 'EXAM' ? 'prova' : 'aula')} a este módulo`}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -294,7 +314,7 @@ export default function ModuleLessonsPage() {
                 onCheckedChange={(checked) => setValue('isActive', checked === true)}
               />
               <Label htmlFor="isActive" className="cursor-pointer font-normal">
-                Aula visível para alunos
+                {(dialogKind === 'EXAM' ? 'Prova' : 'Aula')} visível para alunos
               </Label>
             </div>
             <DialogFooter>
@@ -305,7 +325,7 @@ export default function ModuleLessonsPage() {
                 {(createLesson.isPending || updateLesson.isPending) && (
                   <Spinner className="mr-2 h-4 w-4" />
                 )}
-                {editingLesson ? 'Salvar Alterações' : 'Criar Aula'}
+                {editingLesson ? 'Salvar Alterações' : `Criar ${dialogKind === 'EXAM' ? 'Prova' : 'Aula'}`}
               </Button>
             </DialogFooter>
           </form>
