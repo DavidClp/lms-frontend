@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2 } from 'lucide-react'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType } from 'lucide-react'
 import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
@@ -63,6 +63,7 @@ function createBlockByType(type: BlockType): ContentBlock {
         ['.mp3', 'Música / áudio', 'Windows Media Player'],
       ],
     }
+  if (type === 'PDF') return { type: 'PDF', src: '/lesson-pdfs/', title: '' }
   return {
     type: 'QUIZ',
     questions: [{
@@ -224,6 +225,13 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                   onChange={(updated) => updateBlock(index, updated)}
                 />
               )}
+              {block.type === 'PDF' && (
+                <PdfBlockEditor
+                  src={block.src}
+                  title={block.title}
+                  onChange={(src, title) => updateBlock(index, { type: 'PDF', src, title })}
+                />
+              )}
             </SortableBlockItem>
           ))}
         </SortableContext>
@@ -275,6 +283,11 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <Table2 className="h-4 w-4" /> Tabela
               </div>
             </SelectItem>
+            <SelectItem value="PDF">
+              <div className="flex items-center gap-2">
+                <FileType className="h-4 w-4" /> PDF
+              </div>
+            </SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={addBlock} disabled={!addingType} variant="outline">
@@ -296,6 +309,7 @@ const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: React.ReactNo
   { value: 'IMAGES', label: 'Imagens', icon: <ImageIcon className="h-4 w-4" /> },
   { value: 'OPEN_QUESTION', label: 'Pergunta (texto)', icon: <PenLine className="h-4 w-4" /> },
   { value: 'TABLE', label: 'Tabela', icon: <Table2 className="h-4 w-4" /> },
+  { value: 'PDF', label: 'PDF', icon: <FileType className="h-4 w-4" /> },
 ]
 
 function SortableBlockItem({
@@ -379,6 +393,50 @@ function SortableBlockItem({
         )}
       </div>
     </div>
+  )
+}
+
+function PdfBlockEditor({
+  src,
+  title,
+  onChange,
+}: {
+  src: string
+  title?: string
+  onChange: (src: string, title?: string) => void
+}) {
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <FileType className="h-4 w-4" /> PDF
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <Label>Título (opcional)</Label>
+          <Input
+            value={title ?? ''}
+            onChange={(e) => onChange(src, e.target.value.trim() || undefined)}
+            placeholder="Ex.: Leitura complementar"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Caminho do ficheiro</Label>
+          <Input
+            value={src}
+            onChange={(e) => onChange(e.target.value, title)}
+            placeholder="/lesson-pdfs/material.pdf"
+            className="font-mono text-sm"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Guarde o PDF em{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">frontend/public/lesson-pdfs/</code> e
+          indique o caminho público (começa com <code className="rounded bg-muted px-1 text-[11px]">/lesson-pdfs/</code>).
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 

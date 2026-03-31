@@ -40,6 +40,7 @@ export type BlockType =
   | 'OPEN_QUESTION'
   | 'IFRAME'
   | 'TABLE'
+  | 'PDF'
 
 export interface TextBlock {
   type: 'TEXT'
@@ -141,6 +142,14 @@ export interface TableBlock {
   rows: string[][]
 }
 
+/** PDF servido a partir de `frontend/public` (ex.: `/lesson-pdfs/material.pdf`) */
+export interface PdfBlock {
+  type: 'PDF'
+  /** Caminho público começando em `/`, ex.: `/lesson-pdfs/apostila.pdf` */
+  src: string
+  title?: string
+}
+
 export type ContentBlock =
   | TextBlock
   | VideoBlock
@@ -150,6 +159,7 @@ export type ContentBlock =
   | ImagesBlock
   | OpenQuestionBlock
   | TableBlock
+  | PdfBlock
 
 /** Resultados do quiz por bloco (índice): lista de acerto/erro por pergunta */
 export type QuizResultsByBlock = Record<string, { questionId: string; correct: boolean }[]>

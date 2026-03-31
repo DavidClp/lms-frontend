@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock } from '@/types'
+import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock, PdfBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
-import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw, Table2 } from 'lucide-react'
+import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw, Table2, FileType } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { getYouTubeStartSeconds } from '@/lib/youtube-start'
 import { Textarea } from '@/components/ui/textarea'
+import { PdfViewer } from '@/components/lessons/pdf-viewer'
 import {
   Dialog,
   DialogContent,
@@ -77,9 +78,61 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
             />
           )}
           {block.type === 'TABLE' && <TableBlockComponent block={block} />}
+          {block.type === 'PDF' && <PdfBlockComponent block={block} />}
         </div>
       ))}
     </div>
+  )
+}
+
+/** Apenas caminhos relativos sob /lesson-pdfs/ (ficheiros em public/lesson-pdfs/). */
+function safeLessonPdfSrc(src: string): string | null {
+  const s = src.trim()
+  if (!s.startsWith('/') || s.startsWith('//')) return null
+  if (!s.toLowerCase().endsWith('.pdf')) return null
+  if (!s.startsWith('/lesson-pdfs/')) return null
+  return s
+}
+
+function PdfBlockComponent({ block }: { block: PdfBlock }) {
+  const url = safeLessonPdfSrc(block.src)
+  const heading = block.title?.trim() || 'Documento PDF'
+
+  if (!url) {
+    return (
+      <Card className="gap-0 border-amber-200/80 bg-amber-50/40 dark:bg-amber-950/20">
+        <CardContent className="pt-6 pb-6 text-sm text-muted-foreground">
+          <p className="mb-2 font-medium text-foreground">PDF não configurado</p>
+          <p>
+            Coloque o ficheiro em{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">frontend/public/lesson-pdfs/</code> e defina o
+            caminho público como{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">/lesson-pdfs/nome.pdf</code>.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <FileType className="h-5 w-5 text-primary shrink-0" />
+          {heading}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 px-3 pb-3 space-y-3">
+        <PdfViewer url={url} mode="continuous" initialScale={1.05} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <a href={url} target="_blank" rel="noopener noreferrer">
+              Abrir em nova aba
+            </a>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -138,8 +191,6 @@ function TextBlockComponent({ value }: { value: string }) {
     : ''
   const isPlainText = !isHtml || sanitized.replace(/<[^>]+>/g, '').trim() === value.trim()
 
-  console.log("isPlainText", isPlainText)
-  console.log("sanitized", sanitized)
   // Visualização “editor desabilitado”: mesmo estilo da área de conteúdo do editor, sem bordas, só leitura
   const editorContentClass =
     'prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed min-h-[60px] px-3 py-2 rounded-lg [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_p]:block [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li]:mb-1'
