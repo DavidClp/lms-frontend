@@ -2,14 +2,16 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { User, LoginCredentials } from '@/types'
+import type { User, LoginCredentials, StudentRegisterData } from '@/types'
 import { authApi } from '@/lib/api'
+import { isAccessTokenExpired } from '@/lib/auth-token'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
   login: (credentials: LoginCredentials) => Promise<void>
+  registerStudent: (data: StudentRegisterData) => Promise<void>
   logout: () => void
 }
 
@@ -21,40 +23,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    // Check for stored user on mount
     const storedUser = localStorage.getItem('lms_user')
+    const token = localStorage.getItem('lms_token')
+
     if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch {
+      if (isAccessTokenExpired(token)) {
         localStorage.removeItem('lms_user')
         localStorage.removeItem('lms_token')
+        setUser(null)
+        router.replace('/login')
+      } else {
+        try {
+          setUser(JSON.parse(storedUser))
+        } catch {
+          localStorage.removeItem('lms_user')
+          localStorage.removeItem('lms_token')
+        }
       }
     }
     setIsLoading(false)
-  }, [])
+  }, [router])
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
-        console.log("credentials", credentials)
-    const { user, token } = await authApi.login(credentials)
+  const finalizeAuth = useCallback((authData: { user: User; token: string }) => {
+    const { user, token } = authData
     localStorage.setItem('lms_user', JSON.stringify(user))
     localStorage.setItem('lms_token', token)
     setUser(user)
-    
-    // Redirect based on role
+
     if (user.role === 'ADMIN') {
       router.push('/admin')
-    } else {
-      router.push('/dashboard')
+      return
     }
+
+    router.push('/dashboard')
   }, [router])
+
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    const authData = await authApi.login(credentials)
+    finalizeAuth(authData)
+  }, [finalizeAuth])
+
+  const registerStudent = useCallback(async (data: StudentRegisterData) => {
+    const authData = await authApi.registerStudent(data)
+    finalizeAuth(authData)
+  }, [finalizeAuth])
 
   const logout = useCallback(() => {
     localStorage.removeItem('lms_user')
     localStorage.removeItem('lms_token')
     setUser(null)
-    router.push('/login')
+    router.replace('/login')
   }, [router])
+
+  useEffect(() => {
+    if (!user) return
+
+    const check = () => {
+      const t = localStorage.getItem('lms_token')
+      if (isAccessTokenExpired(t)) logout()
+    }
+
+    const interval = setInterval(check, 60_000)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') check()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [user, logout])
 
   return (
     <AuthContext.Provider
@@ -63,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        registerStudent,
         logout,
       }}
     >

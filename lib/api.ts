@@ -4,6 +4,7 @@ import type {
   Lesson,
   Progress,
   LoginCredentials,
+  StudentRegisterData,
   AuthResponse,
   ModuleFormData,
   LessonFormData,
@@ -45,7 +46,24 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   })
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`)
+    let errorMessage = `API Error: ${response.statusText}`
+
+    try {
+      const errorData = await response.json()
+      if (typeof errorData?.error === 'string' && errorData.error.trim().length > 0) {
+        errorMessage = errorData.error
+      }
+    } catch {
+      // Keep fallback error message when API does not return JSON.
+    }
+
+    if (response.status === 401 && errorMessage === 'Token inválido ou expirado') {
+      localStorage.removeItem('lms_user')
+      localStorage.removeItem('lms_token')
+      window.location.href = '/login'
+    }
+
+    throw new Error(errorMessage)
   }
 
   return response.json()
@@ -122,6 +140,11 @@ export const authApi = {
     fetchApi<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    }),
+  registerStudent: (data: StudentRegisterData) =>
+    fetchApi<AuthResponse>('/auth/register-student', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 }
 

@@ -207,6 +207,11 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface StudentRegisterData {
+  name: string
+  email: string
+}
+
 export interface AuthResponse {
   user: User
   token: string

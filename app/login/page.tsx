@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -9,14 +9,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { BookOpen, GraduationCap, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, GraduationCap } from 'lucide-react'
 import type { LoginCredentials } from '@/types'
 
 export default function LoginPage() {
   const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>()
+  const [showPassword, setShowPassword] = useState(false)
+
+  const {
+    register: registerLogin,
+    handleSubmit: handleLoginSubmit,
+    formState: { errors: loginErrors },
+  } = useForm<LoginCredentials>()
 
   const onSubmit = async (data: LoginCredentials) => {
     setIsLoading(true)
@@ -49,14 +54,14 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleLoginSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
-                  {...register('email', { 
+                  {...registerLogin('email', {
                     required: 'Email obrigatório',
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -64,27 +69,38 @@ export default function LoginPage() {
                     }
                   })}
                 />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                {loginErrors.email && (
+                  <p className="text-sm text-destructive">{loginErrors.email.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="********"
-                  {...register('password', { 
-                    required: 'Senha obrigatória',
-                    minLength: {
-                      value: 6,
-                      message: 'Mínimo 6 caracteres'
-                    }
-                  })}
-                />
-                {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="********"
+                    className="pr-10"
+                    {...registerLogin('password', {
+                      required: 'Senha obrigatória',
+                      minLength: {
+                        value: 6,
+                        message: 'Mínimo 6 caracteres'
+                      }
+                    })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {loginErrors.password && (
+                  <p className="text-sm text-destructive">{loginErrors.password.message}</p>
                 )}
               </div>
 
@@ -92,6 +108,15 @@ export default function LoginPage() {
                 {isLoading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
+
+            <div className="my-6 border-t" />
+
+            <div className="space-y-4">
+              <h3 className="font-semibold">Sou aluno novo</h3>
+              <Button asChild type="button" variant="outline" className="w-full">
+                <Link href="/login/aluno-novo">Sou aluno novo</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

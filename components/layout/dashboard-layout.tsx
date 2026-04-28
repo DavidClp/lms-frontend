@@ -10,9 +10,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/auth-context'
 import {
   LayoutDashboard,
@@ -134,46 +134,70 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
           })}
         </nav>
 
-        {/* User info */}
+        {/* User info + logout */}
         <div className="border-t border-sidebar-border p-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  'w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent',
-                  sidebarCollapsed && 'justify-center px-2'
-                )}
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                {!sidebarCollapsed && (
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-medium">{user?.name}</span>
-                    <span className="text-xs text-sidebar-foreground/70">
-                      {role === 'ADMIN' ? 'Professor' : 'Aluno'}
-                    </span>
-                  </div>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link href={role === 'ADMIN' ? '/admin' : '/profile'}>
-                  <User className="mr-2 h-4 w-4" />
-                  Perfil
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
+          <div
+            className={cn(
+              'flex gap-1',
+              sidebarCollapsed ? 'flex-col items-center' : 'flex-row items-center'
+            )}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'text-sidebar-foreground hover:bg-sidebar-accent',
+                    sidebarCollapsed
+                      ? 'h-auto w-full justify-center px-2 py-2'
+                      : 'min-w-0 flex-1 justify-start gap-3'
+                  )}
+                >
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {user?.name?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!sidebarCollapsed && (
+                    <div className="min-w-0 flex flex-col items-start text-left">
+                      <span className="truncate text-sm font-medium">{user?.name}</span>
+                      <span className="text-xs text-sidebar-foreground/70">
+                        {role === 'ADMIN' ? 'Professor' : 'Aluno'}
+                      </span>
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href={role === 'ADMIN' ? '/admin' : '/profile'}>
+                    <User className="mr-2 h-4 w-4" />
+                    Perfil
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-destructive',
+                    sidebarCollapsed && 'h-9 w-9'
+                  )}
+                  onClick={logout}
+                  aria-label="Sair"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={4}>
                 Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </aside>
 

@@ -260,12 +260,18 @@ function VideoBlockComponent({
           ...(endAt > 0 ? { end: endAt } : {}),
         },
         events: {
-          onReady: (event: { target: { setPlaybackQuality?: (q: string) => void } }) => {
-            try {
-              event.target.setPlaybackQuality?.('highres')
-            } catch {
-              event.target.setPlaybackQuality?.('hd1080')
+          onReady: (event: {
+            target: {
+              setPlaybackQuality?: (q: string) => void
+              getAvailableQualityLevels?: () => string[]
             }
+          }) => {
+            const qualityPriority = ['highres', 'hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small']
+            const available = event.target.getAvailableQualityLevels?.() ?? []
+            const bestAvailable = qualityPriority.find((q) => available.includes(q)) ?? 'highres'
+
+            // YouTube trata qualidade como sugestão; aqui tentamos o melhor nível disponível.
+            event.target.setPlaybackQuality?.(bestAvailable)
           },
         },
       })
@@ -319,6 +325,7 @@ function VideoBlockComponent({
         modestbranding: '1',
         rel: '0',
         iv_load_policy: '3',
+        vq: 'hd1080',
       })
       if (start > 0) params.set('start', String(start))
       if (end > 0) params.set('end', String(end))
