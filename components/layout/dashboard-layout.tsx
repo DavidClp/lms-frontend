@@ -19,6 +19,7 @@ import {
   BookOpen,
   FileText,
   Users,
+  Settings,
   GraduationCap,
   User,
   TrendingUp,
@@ -33,6 +34,7 @@ const adminNavItems = [
   { href: '/admin/modules', label: 'Módulos', icon: BookOpen },
   { href: '/admin/lessons', label: 'Aulas', icon: FileText },
   { href: '/admin/students', label: 'Alunos', icon: Users },
+  { href: '/admin/settings', label: 'Configurações', icon: Settings },
 ]
 
 const studentNavItems = [

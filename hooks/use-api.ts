@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { modulesApi, lessonsApi, usersApi, progressApi } from '@/lib/api'
+import { modulesApi, lessonsApi, usersApi, progressApi, platformConfigApi } from '@/lib/api'
 import type { ModuleFormData, LessonFormData, UserFormData } from '@/types'
 
 // Modules hooks
@@ -213,6 +213,23 @@ export function useMarkProgress() {
       progressApi.markComplete(lessonId, completed),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progress'] })
+    },
+  })
+}
+
+export function usePlatformConfig() {
+  return useQuery({
+    queryKey: ['platform-config'],
+    queryFn: platformConfigApi.get,
+  })
+}
+
+export function useUpdatePlatformConfig() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: platformConfigApi.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platform-config'] })
     },
   })
 }

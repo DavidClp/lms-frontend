@@ -217,6 +217,10 @@ export interface AuthResponse {
   token: string
 }
 
+export interface PlatformConfig {
+  disableStudentPassword: boolean
+}
+
 // Form types
 export interface ModuleFormData {
   title: string

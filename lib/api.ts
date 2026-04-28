@@ -10,6 +10,7 @@ import type {
   LessonFormData,
   UserFormData,
   LessonQuizResultsResponse,
+  PlatformConfig,
 } from '@/types'
 import {
   mockUsers,
@@ -144,6 +145,15 @@ export const authApi = {
   registerStudent: (data: StudentRegisterData) =>
     fetchApi<AuthResponse>('/auth/register-student', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+}
+
+export const platformConfigApi = {
+  get: () => fetchApi<PlatformConfig>('/platform-config'),
+  update: (data: PlatformConfig) =>
+    fetchApi<PlatformConfig>('/platform-config', {
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 }
