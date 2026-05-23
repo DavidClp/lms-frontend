@@ -22,6 +22,7 @@ export function useModule(id: string) {
 
 export function useModuleLessons(moduleId: string, options?: { enabled?: boolean; kind?: 'LESSON' | 'EXAM' }) {
   const enabled = options?.enabled !== false && !!moduleId
+  
   return useQuery({
     queryKey: ['modules', moduleId, 'lessons', options?.kind ?? 'ALL'],
     queryFn: () => modulesApi.getLessons(moduleId, { kind: options?.kind }),
