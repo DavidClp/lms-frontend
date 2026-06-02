@@ -16,7 +16,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 export function PdfViewer({
   url,
   mode = 'continuous',
-  initialScale = 1.05,
+  initialScale = 0.90,
 }: {
   url: string
   mode?: 'continuous' | 'paged'
