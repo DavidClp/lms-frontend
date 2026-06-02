@@ -123,7 +123,7 @@ function PdfBlockComponent({ block }: { block: PdfBlock }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 px-3 pb-3 space-y-3">
-        <PdfViewer url={url} mode="continuous" initialScale={1.05} />
+        <PdfViewer url={url} mode="continuous" initialScale={0.80} />
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button variant="outline" size="sm" asChild>
             <a href={url} target="_blank" rel="noopener noreferrer">
