@@ -68,6 +68,9 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
     )
   }
 
+  const selectedModule = modules?.find((m) => m.id === moduleId)
+  const isKidsModule = selectedModule?.audience === 'KIDS' || selectedModule?.audience === 'ALL'
+
   if (!lesson) {
     return (
       <div className="text-center py-12">
@@ -161,6 +164,7 @@ export default function LessonEditPage({ params }: { params: Promise<{ id: strin
             <BlockEditor
               blocks={content}
               onChange={setContent}
+              isKidsModule={isKidsModule}
             />
           </CardContent>
         </Card>

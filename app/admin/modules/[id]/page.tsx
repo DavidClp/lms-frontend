@@ -10,7 +10,8 @@ import { ArrowLeft, BookOpen, GraduationCap } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
-import type { Module } from '@/types'
+import type { Module, ModuleFormData } from '@/types'
+import { trackFromModule, adminModulesBasePath } from '@/lib/content-audience'
 
 export default function ModuleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -23,7 +24,7 @@ export default function ModuleDetailPage({ params }: { params: Promise<{ id: str
 
   const handleUpdate = async (data: Partial<Module>) => {
     try {
-      await updateModule.mutateAsync({ id, data })
+      await updateModule.mutateAsync({ id, data: data as ModuleFormData })
       toast.success('Módulo atualizado com sucesso!')
     } catch {
       toast.error('Erro ao atualizar módulo')
@@ -49,17 +50,21 @@ export default function ModuleDetailPage({ params }: { params: Promise<{ id: str
     )
   }
 
+  const track = trackFromModule(module)
+  const isKids = track === 'kids'
+  const modulesBase = adminModulesBasePath(track)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/modules">
+          <Link href={modulesBase}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <PageHeader
           title={module.title}
-          description="Editar informações do módulo"
+          description={isKids ? 'Editar mundo Kids' : 'Editar informações do módulo'}
         />
       </div>
 
@@ -76,6 +81,7 @@ export default function ModuleDetailPage({ params }: { params: Promise<{ id: str
                 onSubmit={handleUpdate}
                 isLoading={updateModule.isPending}
                 submitLabel="Salvar Alterações"
+                lockAudience={module.audience === 'ALL' ? undefined : module.audience}
               />
             </CardContent>
           </Card>
@@ -86,16 +92,18 @@ export default function ModuleDetailPage({ params }: { params: Promise<{ id: str
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <GraduationCap className="h-4 w-4" />
-                Aulas
+                {isKids ? 'Missões' : 'Aulas'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{lessonCount}</div>
-              <p className="text-sm text-muted-foreground">aulas neste módulo</p>
+              <p className="text-sm text-muted-foreground">
+                {isKids ? 'missões neste mundo' : 'aulas neste módulo'}
+              </p>
               <Button asChild className="w-full mt-4" variant="outline">
                 <Link href={`/admin/modules/${id}/lessons`}>
                   <BookOpen className="h-4 w-4 mr-2" />
-                  Gerenciar Aulas
+                  {isKids ? 'Gerenciar Missões' : 'Gerenciar Aulas'}
                 </Link>
               </Button>
             </CardContent>

@@ -15,6 +15,7 @@ interface ModuleCardProps {
   progress?: number
   showActions?: boolean
   locked?: boolean
+  isKids?: boolean
   onEdit?: () => void
   onDelete?: () => void
 }
@@ -25,6 +26,7 @@ export function ModuleCard({
   progress,
   showActions,
   locked = false,
+  isKids = false,
   onEdit,
   onDelete,
 }: ModuleCardProps) {
@@ -34,11 +36,11 @@ export function ModuleCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', locked ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary')}>
-              {locked ? <Lock className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
+            <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg text-xl', locked ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary')}>
+              {locked ? <Lock className="h-5 w-5" /> : isKids ? (module.kidsMeta?.worldIcon ?? '🏝️') : <BookOpen className="h-5 w-5" />}
             </div>
             <Badge variant="secondary" className="text-xs">
-              Módulo {module.order}
+              {isKids ? `Mundo ${module.order}` : `Módulo ${module.order}`}
             </Badge>
           </div>
           {showActions && (

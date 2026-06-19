@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>
   registerStudent: (data: StudentRegisterData) => Promise<void>
   logout: () => void
+  updateUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -75,6 +76,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace('/login')
   }, [router])
 
+  const updateUser = useCallback((updated: User) => {
+    localStorage.setItem('lms_user', JSON.stringify(updated))
+    setUser(updated)
+  }, [])
+
   useEffect(() => {
     if (!user) return
 
@@ -103,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         registerStudent,
         logout,
+        updateUser,
       }}
     >
       {children}

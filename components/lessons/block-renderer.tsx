@@ -28,6 +28,7 @@ export type QuizResultItem = { questionId: string; correct: boolean }
 
 interface BlockRendererProps {
   blocks: ContentBlock[]
+  variant?: 'default' | 'kids'
   /** Chamado quando o aluno verifica respostas do quiz (para salvar histórico). Opcional. */
   onQuizResult?: (blockIndex: number, results: QuizResultItem[]) => void
   /** Respostas já salvas das atividades de pergunta em texto (índice do bloco -> texto). Opcional. */
@@ -36,9 +37,21 @@ interface BlockRendererProps {
   onSaveOpenQuestion?: (blockIndex: number, answer: string) => void
   /** Resultados já salvos do quiz por bloco (histórico imutável). Quando existe, o aluno não pode enviar de novo. Opcional. */
   savedQuizResults?: Record<number, QuizResultItem[]>
+  /** Estado persistido de checklist por índice de bloco */
+  checklistState?: Record<number, boolean[]>
+  onChecklistChange?: (blockIndex: number, checked: boolean[]) => void
 }
 
-export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOpenQuestion, savedQuizResults }: BlockRendererProps) {
+export function BlockRenderer({
+  blocks,
+  variant = 'default',
+  onQuizResult,
+  savedOpenAnswers,
+  onSaveOpenQuestion,
+  savedQuizResults,
+  checklistState,
+  onChecklistChange,
+}: BlockRendererProps) {
   return (
     <div className="space-y-6">
       {blocks?.map((block, index) => (
@@ -55,12 +68,19 @@ export function BlockRenderer({ blocks, onQuizResult, savedOpenAnswers, onSaveOp
           )}
           {block.type === 'IFRAME' && <IframeBlockComponent url={block.url} title={block.title} googleDocId={block.googleDocId} />}
           {block.type === 'ACTIVITY_CHECKLIST' && (
-            <ChecklistBlockComponent title={block.title} items={block.items} />
+            <ChecklistBlockComponent
+              title={block.title}
+              items={block.items}
+              variant={variant}
+              initialChecked={checklistState?.[index]}
+              onChange={(checked) => onChecklistChange?.(index, checked)}
+            />
           )}
           {block.type === 'QUIZ' && (
             <QuizBlockComponent
               block={block}
               blockIndex={index}
+              variant={variant}
               onQuizResult={onQuizResult}
               savedBlockResults={savedQuizResults?.[index]}
             />
@@ -404,8 +424,36 @@ function IframeBlockComponent({ url, title, googleDocId }: { url: string; title?
   )
 }
 
-function ChecklistBlockComponent({ title, items }: { title?: string; items: string[] }) {
-  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
+function ChecklistBlockComponent({
+  title,
+  items,
+  variant = 'default',
+  initialChecked,
+  onChange,
+}: {
+  title?: string
+  items: string[]
+  variant?: 'default' | 'kids'
+  initialChecked?: boolean[]
+  onChange?: (checked: boolean[]) => void
+}) {
+  const [checkedItems, setCheckedItems] = useState<Set<number>>(() => {
+    const set = new Set<number>()
+    initialChecked?.forEach((v, i) => {
+      if (v) set.add(i)
+    })
+    return set
+  })
+
+  useEffect(() => {
+    if (initialChecked) {
+      const set = new Set<number>()
+      initialChecked.forEach((v, i) => {
+        if (v) set.add(i)
+      })
+      setCheckedItems(set)
+    }
+  }, [initialChecked])
 
   const toggleItem = (index: number) => {
     const newChecked = new Set(checkedItems)
@@ -415,22 +463,24 @@ function ChecklistBlockComponent({ title, items }: { title?: string; items: stri
       newChecked.add(index)
     }
     setCheckedItems(newChecked)
+    const arr = items.map((_, i) => newChecked.has(i))
+    onChange?.(arr)
   }
 
   const allChecked = checkedItems.size === items.length
 
   return (
-    <Card className={cn(allChecked && 'border-green-200 bg-green-50/50')}>
+    <Card className={cn(allChecked && (variant === 'kids' ? 'border-secondary bg-secondary/10' : 'border-green-200 bg-green-50/50'))}>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-base">
+        <CardTitle className={cn('flex items-center justify-between', variant === 'kids' ? 'text-lg' : 'text-base')}>
           <div className="flex items-center gap-2">
             <CheckSquare className="h-5 w-5 text-primary" />
-            {title || 'Atividade Prática'}
+            {title || (variant === 'kids' ? 'Desafio Prático' : 'Atividade Prática')}
           </div>
           {allChecked && (
-            <Badge className="bg-green-100 text-green-700">
+            <Badge className={variant === 'kids' ? 'bg-secondary text-white' : 'bg-green-100 text-green-700'}>
               <CheckCircle className="mr-1 h-3 w-3" />
-              Concluída
+              {variant === 'kids' ? 'Mandou bem!' : 'Concluída'}
             </Badge>
           )}
         </CardTitle>
@@ -442,8 +492,11 @@ function ChecklistBlockComponent({ title, items }: { title?: string; items: stri
               key={index}
               className={cn(
                 'flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer',
+                variant === 'kids' && 'min-h-12 text-base',
                 checkedItems.has(index)
-                  ? 'border-green-200 bg-green-50'
+                  ? variant === 'kids'
+                    ? 'border-secondary bg-secondary/10'
+                    : 'border-green-200 bg-green-50'
                   : 'hover:bg-muted/50'
               )}
               onClick={() => toggleItem(index)}
@@ -633,11 +686,13 @@ function getQuizQuestions(block: QuizBlock): QuizQuestion[] {
 function QuizBlockComponent({
   block,
   blockIndex,
+  variant = 'default',
   onQuizResult,
   savedBlockResults,
 }: {
   block: QuizBlock
   blockIndex: number
+  variant?: 'default' | 'kids'
   onQuizResult?: (blockIndex: number, results: QuizResultItem[]) => void
   savedBlockResults?: QuizResultItem[]
 }) {
@@ -687,7 +742,7 @@ function QuizBlockComponent({
       <CardHeader className="pb-0 gap-0">
         <CardTitle className="flex items-center gap-2 text-base">
           <HelpCircle className="h-5 w-5 text-primary" />
-          Quiz
+          {variant === 'kids' ? 'Desafio!' : 'Quiz'}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 space-y-6">
@@ -702,6 +757,7 @@ function QuizBlockComponent({
               onSelect={(optionId) => setSelected(q.id, optionId)}
               submitted={quizSubmitted}
               savedCorrect={savedResult?.correct}
+              variant={variant}
             />
           )
         })}
@@ -716,8 +772,12 @@ function QuizBlockComponent({
         )}
         {!quizSubmitted && !alreadyResponded && (
           <div className="pt-2">
-            <Button onClick={handleCorrigirTudo} disabled={!hasAnySelection}>
-              Corrigir quiz
+            <Button
+              onClick={handleCorrigirTudo}
+              disabled={!hasAnySelection}
+              className={variant === 'kids' ? 'min-h-12 w-full text-lg' : undefined}
+            >
+              {variant === 'kids' ? 'Verificar resposta!' : 'Corrigir quiz'}
             </Button>
           </div>
         )}
@@ -733,6 +793,7 @@ function QuizQuestionCard({
   onSelect,
   submitted,
   savedCorrect,
+  variant = 'default',
 }: {
   question: QuizQuestion
   questionNumber: number
@@ -740,23 +801,32 @@ function QuizQuestionCard({
   onSelect: (optionId: string) => void
   submitted: boolean
   savedCorrect?: boolean
+  variant?: 'default' | 'kids'
 }) {
   const isCorrect = selectedOption === question.correctOptionId
   const showCorrect = savedCorrect !== undefined ? savedCorrect : isCorrect
+  const isKids = variant === 'kids'
 
   return (
     <div
       className={cn(
         'rounded-lg border p-4',
-        submitted && (showCorrect ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30')
+        submitted &&
+          (showCorrect
+            ? isKids
+              ? 'border-secondary bg-secondary/10'
+              : 'border-green-200 bg-green-50/30'
+            : isKids
+              ? 'border-primary/30 bg-primary/5'
+              : 'border-red-200 bg-red-50/30')
       )}
     >
       <p className="mb-3 text-sm font-medium text-muted-foreground">Pergunta {questionNumber}</p>
-      <p className="mb-4 text-lg font-medium">{question.question}</p>
+      <p className={cn('mb-4 font-medium', isKids ? 'text-xl' : 'text-lg')}>{question.question}</p>
       <div className="space-y-2">
         {question.options.map((option) => {
           const isSelected = selectedOption === option.id
-          const showCorrect = submitted && option.id === question.correctOptionId
+          const showOptionCorrect = submitted && option.id === question.correctOptionId
           const showIncorrect = submitted && isSelected && !isCorrect
 
           return (
@@ -766,10 +836,11 @@ function QuizQuestionCard({
               onClick={() => onSelect(option.id)}
               className={cn(
                 'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
+                isKids && 'min-h-12 text-base',
                 !submitted && isSelected && 'border-primary bg-primary/5',
                 !submitted && !isSelected && 'hover:bg-muted/50',
-                showCorrect && 'border-green-500 bg-green-50',
-                showIncorrect && 'border-red-500 bg-red-50'
+                showOptionCorrect && (isKids ? 'border-secondary bg-secondary/10' : 'border-green-500 bg-green-50'),
+                showIncorrect && !isKids && 'border-red-500 bg-red-50'
               )}
             >
               <div
@@ -783,8 +854,8 @@ function QuizQuestionCard({
                 {option.id.toUpperCase()}
               </div>
               <span className="flex-1">{option.text}</span>
-              {showCorrect && <CheckCircle className="h-5 w-5 text-green-600" />}
-              {showIncorrect && <XCircle className="h-5 w-5 text-red-600" />}
+              {showOptionCorrect && <CheckCircle className="h-5 w-5 text-green-600" />}
+              {showIncorrect && !isKids && <XCircle className="h-5 w-5 text-red-600" />}
             </button>
           )
         })}
@@ -792,14 +863,18 @@ function QuizQuestionCard({
       {submitted && (
         <div className="mt-3">
           {showCorrect ? (
-            <Badge className="bg-green-100 text-green-700 h-8 px-3">
+            <Badge className={isKids ? 'bg-secondary text-white h-10 px-4 text-base' : 'bg-green-100 text-green-700 h-8 px-3'}>
               <CheckCircle className="mr-1 h-3 w-3" />
-              Correto!
+              {isKids ? 'Isso aí! Mandou bem!' : 'Correto!'}
             </Badge>
           ) : (
-            <Badge className="bg-red-100 text-red-700 h-8 px-3">
-              <XCircle className="mr-1 h-3 w-3" />
-              Incorreto
+            <Badge className={isKids ? 'bg-primary/20 text-primary h-10 px-4 text-base' : 'bg-red-100 text-red-700 h-8 px-3'}>
+              {isKids ? '🤖 Quase! Tenta outra vez!' : (
+                <>
+                  <XCircle className="mr-1 h-3 w-3" />
+                  Incorreto
+                </>
+              )}
             </Badge>
           )}
         </div>

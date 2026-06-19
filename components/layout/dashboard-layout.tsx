@@ -27,12 +27,15 @@ import {
   X,
   LogOut,
   ChevronLeft,
+  Sparkles,
 } from 'lucide-react'
 
 const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/modules', label: 'Módulos', icon: BookOpen },
-  { href: '/admin/lessons', label: 'Aulas', icon: FileText },
+  { href: '/admin/modules', label: 'Módulos (Adultos)', icon: BookOpen },
+  { href: '/admin/lessons', label: 'Aulas (Adultos)', icon: FileText },
+  { href: '/admin/kids/modules', label: 'Mundos Kids', icon: Sparkles },
+  { href: '/admin/kids/lessons', label: 'Missões Kids', icon: GraduationCap },
   { href: '/admin/students', label: 'Alunos', icon: Users },
   { href: '/admin/settings', label: 'Configurações', icon: Settings },
 ]

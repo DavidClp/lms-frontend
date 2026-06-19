@@ -1,8 +1,8 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { modulesApi, lessonsApi, usersApi, progressApi, platformConfigApi } from '@/lib/api'
-import type { ModuleFormData, LessonFormData, UserFormData } from '@/types'
+import { gamificationApi, modulesApi, lessonsApi, usersApi, progressApi, platformConfigApi } from '@/lib/api'
+import type { ModuleFormData, LessonFormData, UserFormData, AvatarConfig } from '@/types'
 
 // Modules hooks
 export function useModules() {
@@ -214,6 +214,43 @@ export function useMarkProgress() {
       progressApi.markComplete(lessonId, completed),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progress'] })
+      queryClient.invalidateQueries({ queryKey: ['gamification'] })
+    },
+  })
+}
+
+export function useSaveChecklistState() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      lessonId,
+      blockIndex,
+      checked,
+    }: {
+      lessonId: string
+      blockIndex: number
+      checked: boolean[]
+    }) => progressApi.saveChecklistState(lessonId, blockIndex, checked),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['progress'] })
+      queryClient.invalidateQueries({ queryKey: ['gamification'] })
+    },
+  })
+}
+
+export function useGamification() {
+  return useQuery({
+    queryKey: ['gamification'],
+    queryFn: gamificationApi.getMe,
+  })
+}
+
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (avatarConfig: AvatarConfig) => gamificationApi.updateAvatar(avatarConfig),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gamification'] })
     },
   })
 }

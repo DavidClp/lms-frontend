@@ -33,6 +33,7 @@ import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { countWords, KIDS_TEXT_LIMITS } from '@/lib/kids-messages'
 import { formatSecondsAsMmSs, parseTimeInputToSeconds } from '@/lib/youtube-start'
 import { Textarea } from '../ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -40,6 +41,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 interface BlockEditorProps {
   blocks: ContentBlock[]
   onChange: (blocks: ContentBlock[]) => void
+  isKidsModule?: boolean
 }
 
 function createBlockByType(type: BlockType): ContentBlock {
@@ -75,7 +77,7 @@ function createBlockByType(type: BlockType): ContentBlock {
   } as QuizBlock
 }
 
-export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEditorProps) {
   const [addingType, setAddingType] = useState<BlockType | ''>('')
   const [insertBelowIndex, setInsertBelowIndex] = useState<number | null>(null)
 
@@ -142,6 +144,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 <TextBlockEditor
                   value={block.value}
                   onChange={(value) => updateBlock(index, { type: 'TEXT', value })}
+                  isKidsModule={isKidsModule}
                 />
               )}
               {block.type === 'VIDEO' && (
@@ -443,10 +446,15 @@ function PdfBlockEditor({
 function TextBlockEditor({
   value,
   onChange,
+  isKidsModule = false,
 }: {
   value: string
   onChange: (value: string) => void
+  isKidsModule?: boolean
 }) {
+  const wordCount = countWords(value)
+  const overLimit = isKidsModule && wordCount > KIDS_TEXT_LIMITS.blockWords
+
   return (
     <Card className='gap-0'>
       <CardHeader className="pb-2">
@@ -455,6 +463,11 @@ function TextBlockEditor({
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {overLimit && (
+          <p className="mb-2 text-sm font-medium text-amber-600">
+            Modo Kids: texto longo ({wordCount} palavras). Ideal: até {KIDS_TEXT_LIMITS.blockWords} palavras.
+          </p>
+        )}
         <RichTextEditor
           value={value}
           onChange={onChange}

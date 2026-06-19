@@ -130,3 +130,71 @@ body {
 html {
   font-size: 16px;
 }
+
+[data-profile='kids'] {
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #fbbf24;
+  --secondary-foreground: #1e293b;
+  --accent: #22c55e;
+  --accent-foreground: #ffffff;
+  --background: #eaf6ff;
+  --muted: #dbeafe;
+  --radius: 1.25rem;
+  --sidebar: #f8fcff;
+  --sidebar-primary: #3b82f6;
+  --font-sans: var(--font-nunito);
+}
+
+[data-profile='kids'] html,
+[data-profile='kids'] {
+  font-size: 17px;
+}
+
+.kids-ui {
+  font-family: var(--font-nunito), var(--font-inter), system-ui, sans-serif;
+}
+
+@keyframes kids-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes kids-confetti {
+  0% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.kids-bounce {
+  animation: kids-bounce 1.2s ease-in-out infinite;
+}
+
+.kids-confetti {
+  animation: kids-confetti 0.6s ease-out forwards;
+}
+
+@keyframes kids-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-18deg);
+  }
+}
+

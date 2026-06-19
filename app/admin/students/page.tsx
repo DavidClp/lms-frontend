@@ -54,11 +54,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
 import type { User } from '@/types'
+import { modulesForStudentProfile } from '@/lib/content-audience'
 
 export default function AdminStudentsPage() {
   const { data: users, isLoading } = useUsers()
@@ -83,6 +91,7 @@ export default function AdminStudentsPage() {
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPassword, setEditPassword] = useState('')
+  const [editProfileMode, setEditProfileMode] = useState<'ADULT' | 'KIDS'>('ADULT')
   const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([])
 
   const students = users?.filter(u => u.role === 'STUDENT') || []
@@ -92,6 +101,7 @@ export default function AdminStudentsPage() {
       setEditName(userToEdit.name)
       setEditEmail(userToEdit.email)
       setEditPassword('')
+      setEditProfileMode(userToEdit.profileMode ?? 'ADULT')
     }
   }, [userToEdit])
 
@@ -215,6 +225,7 @@ export default function AdminStudentsPage() {
                 <TableRow>
                   <TableHead>Aluno</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Perfil</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -236,7 +247,12 @@ export default function AdminStudentsPage() {
                       {student.email}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">Ativo</Badge>
+                      <Badge variant={student.profileMode === 'KIDS' ? 'default' : 'secondary'}>
+                        {student.profileMode === 'KIDS' ? 'Kids' : 'Adulto'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">Ativo</Badge>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -321,7 +337,11 @@ export default function AdminStudentsPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault()
-                const data: Partial<User> & { password?: string } = { name: editName, email: editEmail }
+                const data: Partial<User> & { password?: string } = {
+                  name: editName,
+                  email: editEmail,
+                  profileMode: editProfileMode,
+                }
                 if (editPassword) data.password = editPassword
                 handleUpdate(data)
               }}
@@ -350,6 +370,18 @@ export default function AdminStudentsPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="edit-profile">Perfil do aluno</Label>
+                  <Select value={editProfileMode} onValueChange={(v) => setEditProfileMode(v as 'ADULT' | 'KIDS')}>
+                    <SelectTrigger id="edit-profile">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ADULT">Adulto</SelectItem>
+                      <SelectItem value="KIDS">Kids (7-10 anos)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="edit-password">Nova Senha (deixe em branco para manter)</Label>
                   <Input
                     id="edit-password"
@@ -364,11 +396,13 @@ export default function AdminStudentsPage() {
               <div className="space-y-3">
                 <Label>Módulos liberados</Label>
                 <p className="text-sm text-muted-foreground">
-                  Selecione os módulos que este aluno pode acessar. Módulos não marcados aparecerão bloqueados.
+                  {editProfileMode === 'KIDS'
+                    ? 'Somente mundos Kids aparecem para alunos com perfil infantil.'
+                    : 'Somente módulos adultos aparecem para alunos com perfil adulto.'}
                 </p>
                 <div className="grid gap-2 max-h-48 overflow-y-auto rounded-md border p-3">
-                  {modules
-                    ?.slice()
+                  {modulesForStudentProfile(modules ?? [], editProfileMode)
+                    .slice()
                     .sort((a, b) => a.order - b.order)
                     .map((module) => (
                       <div

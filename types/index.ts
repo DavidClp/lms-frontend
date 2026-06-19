@@ -1,12 +1,33 @@
 export type UserRole = 'ADMIN' | 'STUDENT'
+export type ProfileMode = 'ADULT' | 'KIDS'
+export type ModuleAudience = 'ADULT' | 'KIDS' | 'ALL'
+
+export interface AvatarConfig {
+  skin: string
+  hair: string
+  accessory: string
+  background: string
+}
 
 export interface User {
   id: string
   name: string
   email: string
   role: UserRole
+  profileMode?: ProfileMode
+  totalXp?: number
+  level?: number
+  avatarConfig?: AvatarConfig | null
+  currentStreak?: number
+  lastActivityDate?: string
   createdAt?: string
   updatedAt?: string
+}
+
+export interface KidsMeta {
+  worldIcon?: string
+  worldColor?: string
+  mascotIntro?: string
 }
 
 export interface Module {
@@ -14,6 +35,8 @@ export interface Module {
   title: string
   description: string
   order: number
+  audience?: ModuleAudience
+  kidsMeta?: KidsMeta | null
   lessonsCount?: number
   createdAt?: string
   updatedAt?: string
@@ -168,6 +191,9 @@ export type QuizResultsByBlock = Record<string, { questionId: string; correct: b
 /** Respostas de atividade (pergunta em texto) por índice do bloco */
 export type OpenQuestionAnswersByBlock = Record<string, string>
 
+/** Estado de checklist por índice do bloco */
+export type ChecklistStateByBlock = Record<string, boolean[]>
+
 export interface Progress {
   id: string
   lessonId: string
@@ -179,6 +205,8 @@ export interface Progress {
   completedAt?: string
   quizResults?: QuizResultsByBlock
   openQuestionAnswers?: OpenQuestionAnswersByBlock
+  checklistState?: ChecklistStateByBlock
+  gamification?: GamificationSnapshot | null
 }
 
 export interface LessonQuizResultsStudent {
@@ -221,11 +249,57 @@ export interface PlatformConfig {
   disableStudentPassword: boolean
 }
 
+export interface Badge {
+  id: string
+  slug: string
+  name: string
+  description: string
+  iconEmoji: string
+  xpReward: number
+  earnedAt?: string
+  earned?: boolean
+}
+
+export interface DailyMission {
+  id: string
+  userId: string
+  date: string
+  type: 'LOGIN' | 'COMPLETE_LESSON' | 'QUIZ_CORRECT'
+  target: number
+  progress: number
+  completed: boolean
+  xpReward: number
+}
+
+export interface GamificationSnapshot {
+  totalXp: number
+  level: number
+  currentStreak: number
+}
+
+export interface GamificationMe {
+  id: string
+  profileMode: ProfileMode
+  totalXp: number
+  level: number
+  levelName: string
+  xpToNextLevel: number
+  xpProgressPercent: number
+  avatarConfig: AvatarConfig | null
+  currentStreak: number
+  lastActivityDate: string | null
+  badges: Badge[]
+  allBadges: Badge[]
+  dailyMissions: DailyMission[]
+}
+
 // Form types
 export interface ModuleFormData {
   title: string
   description: string
   order: number
+  audience?: ModuleAudience
+  kidsMeta?: KidsMeta | null
 }
 
 export interface LessonFormData {
@@ -242,4 +316,5 @@ export interface UserFormData {
   email: string
   password?: string
   role: UserRole
+  profileMode?: ProfileMode
 }

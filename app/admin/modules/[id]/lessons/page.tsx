@@ -51,6 +51,7 @@ import { EmptyState } from '@/components/layout/empty-state'
 import { useModule, useModuleLessons, useCreateLesson, useUpdateLesson, useDeleteLesson } from '@/hooks/use-api'
 import type { Lesson } from '@/types'
 import { cn } from '@/lib/utils'
+import { trackFromModule, adminModulesBasePath } from '@/lib/content-audience'
 
 interface CreateLessonData {
   moduleId: string
@@ -68,10 +69,14 @@ export default function ModuleLessonsPage() {
   const moduleId = params.id as string
   const kindParam = searchParams.get('kind')
   const kind: 'LESSON' | 'EXAM' = kindParam === 'EXAM' ? 'EXAM' : 'LESSON'
-  const kindLabel = kind === 'EXAM' ? 'Provas' : 'Aulas'
-  const kindLabelSingular = kind === 'EXAM' ? 'Prova' : 'Aula'
 
   const { data: module, isLoading: moduleLoading } = useModule(moduleId)
+  const track = trackFromModule(module)
+  const isKids = track === 'kids'
+  const kindLabel = kind === 'EXAM' ? (isKids ? 'Desafios do Chefe' : 'Provas') : isKids ? 'Missões' : 'Aulas'
+  const kindLabelSingular = kind === 'EXAM' ? (isKids ? 'Desafio' : 'Prova') : isKids ? 'Missão' : 'Aula'
+  const modulesBase = adminModulesBasePath(track)
+
   const { data: lessons = [], isLoading: lessonsLoading } = useModuleLessons(moduleId, { kind })
   const createLesson = useCreateLesson()
   const updateLesson = useUpdateLesson()
@@ -193,8 +198,8 @@ export default function ModuleLessonsPage() {
     return (
       <div className="flex h-96 flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">Módulo não encontrado</p>
-        <Button variant="outline" onClick={() => router.push('/admin/modules')}>
-          Voltar para Módulos
+        <Button variant="outline" onClick={() => router.push(modulesBase)}>
+          Voltar para {isKids ? 'Mundos Kids' : 'Módulos'}
         </Button>
       </div>
     )
@@ -215,11 +220,11 @@ export default function ModuleLessonsPage() {
           <div className="flex gap-2">
             <Button variant={kind === 'LESSON' ? 'default' : 'outline'} onClick={() => openCreateDialog('LESSON')}>
               <Plus className="mr-2 h-4 w-4" />
-              Nova Aula
+              {isKids ? 'Nova Missão' : 'Nova Aula'}
             </Button>
             <Button variant={kind === 'EXAM' ? 'default' : 'outline'} onClick={() => openCreateDialog('EXAM')}>
               <Plus className="mr-2 h-4 w-4" />
-              Nova Prova
+              {isKids ? 'Novo Desafio' : 'Nova Prova'}
             </Button>
           </div>
         </PageHeader>

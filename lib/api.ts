@@ -11,6 +11,8 @@ import type {
   UserFormData,
   LessonQuizResultsResponse,
   PlatformConfig,
+  GamificationMe,
+  AvatarConfig,
 } from '@/types'
 import {
   mockUsers,
@@ -283,5 +285,19 @@ export const progressApi = {
     fetchApi<Progress>('/progress/open-question', {
       method: 'POST',
       body: JSON.stringify({ lessonId, blockIndex, answer }),
+    }),
+  saveChecklistState: (lessonId: string, blockIndex: number, checked: boolean[]) =>
+    fetchApi<Progress>('/progress/checklist', {
+      method: 'POST',
+      body: JSON.stringify({ lessonId, blockIndex, checked }),
+    }),
+}
+
+export const gamificationApi = {
+  getMe: () => fetchApi<GamificationMe>('/gamification/me'),
+  updateAvatar: (avatarConfig: AvatarConfig) =>
+    fetchApi<GamificationMe>('/gamification/avatar', {
+      method: 'PUT',
+      body: JSON.stringify(avatarConfig),
     }),
 }

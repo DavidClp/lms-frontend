@@ -11,8 +11,10 @@ import {
 } from '@/hooks/use-api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/auth-context'
+import { useProfileMode } from '@/contexts/profile-mode-context'
 import { PageHeader } from '@/components/layout/page-header'
 import { BlockRenderer, type QuizResultItem } from '@/components/lessons/block-renderer'
+import { KidsLessonView } from '@/components/kids/kids-lesson-view'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +27,7 @@ import { progressApi } from '@/lib/api'
 export default function StudentLessonPage({ params }: { params: Promise<{ lessonId: string }> }) {
   const { lessonId } = use(params)
   const { user } = useAuth()
+  const { isKids } = useProfileMode()
   const { data: lesson, isLoading, isError } = useLesson(lessonId)
   const { data: module } = useModule(lesson?.moduleId || '')
   const { data: progress } = useUserProgress(user?.id || '')
@@ -77,18 +80,20 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
     })
   }
 
-  const handleMarkComplete = async () => {
-    if (!user) return
+  const handleMarkComplete = async (): Promise<{ gamification?: import('@/types').GamificationSnapshot | null }> => {
+    if (!user) return {}
     try {
-      await markComplete.mutateAsync({
-        //@ts-ignore
-        userId: user?.id || '',
+      const result = await markComplete.mutateAsync({
         lessonId,
-        completed: true
+        completed: true,
       })
-      toast.success('Aula marcada como concluída!')
+      toast.success(isKids ? 'Missão completa!' : 'Aula marcada como concluída!')
+      return {
+        gamification: (result as { gamification?: import('@/types').GamificationSnapshot | null }).gamification ?? null,
+      }
     } catch {
-      toast.error('Erro ao marcar aula como concluída')
+      toast.error(isKids ? 'Erro ao completar missão' : 'Erro ao marcar aula como concluída')
+      throw new Error('failed')
     }
   }
 
@@ -142,16 +147,32 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground mb-4">
               <Lock className="h-7 w-7" />
             </div>
-            <h3 className="text-lg font-semibold mb-1">Aula bloqueada</h3>
+            <h3 className="text-lg font-semibold mb-1">{isKids ? 'Missão bloqueada' : 'Aula bloqueada'}</h3>
             <p className="text-muted-foreground text-sm mb-4">
-              Você não tem acesso ao módulo desta aula. Entre em contato com o professor para liberação.
+              {isKids
+                ? 'Peça ajuda ao professor para liberar este mundo.'
+                : 'Você não tem acesso ao módulo desta aula. Entre em contato com o professor para liberação.'}
             </p>
             <Button asChild>
-              <Link href="/modules">Voltar aos módulos</Link>
+              <Link href="/modules">{isKids ? 'Voltar aos mundos' : 'Voltar aos módulos'}</Link>
             </Button>
           </CardContent>
         </Card>
       </div>
+    )
+  }
+
+  if (isKids && lesson) {
+    return (
+      <KidsLessonView
+        lesson={lesson}
+        module={module}
+        progress={lessonProgress}
+        nextLesson={nextLesson}
+        sortedLessons={sortedModuleLessons}
+        onComplete={handleMarkComplete}
+        isCompleting={markComplete.isPending}
+      />
     )
   }
 
