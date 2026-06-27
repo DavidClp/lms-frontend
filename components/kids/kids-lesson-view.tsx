@@ -74,6 +74,16 @@ export function KidsLessonView({
     })
   }
 
+  const savedGameResults: Record<number, import('@/types').GameResultItem> = {}
+  if (progress?.gameResults) {
+    Object.entries(progress.gameResults).forEach(([key, value]) => {
+      const index = parseInt(key, 10)
+      if (!Number.isNaN(index) && value && typeof value === 'object') {
+        savedGameResults[index] = value as import('@/types').GameResultItem
+      }
+    })
+  }
+
   const mascotMessage = useMemo(() => {
     if (currentStep === 0) return module?.kidsMeta?.mascotIntro ?? KIDS_MESSAGES.missionStart
     if (currentStep >= totalSteps - 1) return 'Último passo! Você consegue!'
@@ -108,6 +118,18 @@ export function KidsLessonView({
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ['progress'] })
           queryClient.invalidateQueries({ queryKey: ['gamification'] })
+        })
+        .catch(() => {})
+    },
+    [lesson.id, queryClient],
+  )
+
+  const handleGameComplete = useCallback(
+    (blockIndex: number, result: import('@/types').GameResultItem) => {
+      progressApi
+        .saveGameResult(lesson.id, blockIndex, result)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['progress'] })
         })
         .catch(() => {})
     },
@@ -174,6 +196,8 @@ export function KidsLessonView({
               savedQuizResults={savedQuizResults}
               checklistState={checklistState}
               onChecklistChange={handleChecklistChange}
+              savedGameResults={savedGameResults}
+              onGameComplete={handleGameComplete}
             />
           )}
         </CardContent>

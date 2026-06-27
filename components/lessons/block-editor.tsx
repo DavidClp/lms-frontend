@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType } from 'lucide-react'
-import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock } from '@/types'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType, Gamepad2 } from 'lucide-react'
+import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock, GameBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -37,6 +37,7 @@ import { countWords, KIDS_TEXT_LIMITS } from '@/lib/kids-messages'
 import { formatSecondsAsMmSs, parseTimeInputToSeconds } from '@/lib/youtube-start'
 import { Textarea } from '../ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import { GameBlockEditor } from '@/components/lessons/game-block-editor'
 
 interface BlockEditorProps {
   blocks: ContentBlock[]
@@ -66,6 +67,7 @@ function createBlockByType(type: BlockType): ContentBlock {
       ],
     }
   if (type === 'PDF') return { type: 'PDF', src: '/lesson-pdfs/', title: '' }
+  if (type === 'GAME') return { type: 'GAME', gameId: '', title: '' }
   return {
     type: 'QUIZ',
     questions: [{
@@ -80,6 +82,10 @@ function createBlockByType(type: BlockType): ContentBlock {
 export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEditorProps) {
   const [addingType, setAddingType] = useState<BlockType | ''>('')
   const [insertBelowIndex, setInsertBelowIndex] = useState<number | null>(null)
+
+  const blockTypeOptions = isKidsModule
+    ? [...BLOCK_TYPE_OPTIONS, { value: 'GAME' as BlockType, label: 'Jogo', icon: <Gamepad2 className="h-4 w-4" /> }]
+    : BLOCK_TYPE_OPTIONS
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -139,6 +145,7 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
               onRemove={() => removeBlock(index)}
               onAddBelow={() => setInsertBelowIndex((i) => (i === index ? null : index))}
               onConfirmInsertBelow={confirmInsertBelow}
+              blockTypeOptions={blockTypeOptions}
             >
               {block.type === 'TEXT' && (
                 <TextBlockEditor
@@ -235,6 +242,12 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
                   onChange={(src, title) => updateBlock(index, { type: 'PDF', src, title })}
                 />
               )}
+              {block.type === 'GAME' && (
+                <GameBlockEditor
+                  block={block}
+                  onChange={(updated) => updateBlock(index, updated)}
+                />
+              )}
             </SortableBlockItem>
           ))}
         </SortableContext>
@@ -291,6 +304,13 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
                 <FileType className="h-4 w-4" /> PDF
               </div>
             </SelectItem>
+            {isKidsModule && (
+              <SelectItem value="GAME">
+                <div className="flex items-center gap-2">
+                  <Gamepad2 className="h-4 w-4" /> Jogo
+                </div>
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
         <Button onClick={addBlock} disabled={!addingType} variant="outline">
@@ -323,6 +343,7 @@ function SortableBlockItem({
   onRemove,
   onAddBelow,
   onConfirmInsertBelow,
+  blockTypeOptions,
 }: {
   id: string
   index: number
@@ -331,6 +352,7 @@ function SortableBlockItem({
   onRemove: () => void
   onAddBelow: () => void
   onConfirmInsertBelow: (type: BlockType) => void
+  blockTypeOptions: { value: BlockType; label: string; icon: React.ReactNode }[]
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = {
@@ -384,7 +406,7 @@ function SortableBlockItem({
               <SelectValue placeholder="Tipo..." />
             </SelectTrigger>
             <SelectContent>
-              {BLOCK_TYPE_OPTIONS.map((opt) => (
+              {blockTypeOptions.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   <div className="flex items-center gap-2">
                     {opt.icon} {opt.label}

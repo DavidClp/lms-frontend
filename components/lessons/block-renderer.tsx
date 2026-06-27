@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils'
 import { getYouTubeStartSeconds } from '@/lib/youtube-start'
 import { Textarea } from '@/components/ui/textarea'
 import { PdfViewer } from '@/components/lessons/pdf-viewer'
+import { GameBlockRenderer } from '@/components/lessons/game-block-renderer'
+import type { GameResultItem } from '@/types'
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,8 @@ interface BlockRendererProps {
   /** Estado persistido de checklist por índice de bloco */
   checklistState?: Record<number, boolean[]>
   onChecklistChange?: (blockIndex: number, checked: boolean[]) => void
+  savedGameResults?: Record<number, GameResultItem>
+  onGameComplete?: (blockIndex: number, result: GameResultItem) => void
 }
 
 export function BlockRenderer({
@@ -51,6 +55,8 @@ export function BlockRenderer({
   savedQuizResults,
   checklistState,
   onChecklistChange,
+  savedGameResults,
+  onGameComplete,
 }: BlockRendererProps) {
   return (
     <div className="space-y-6">
@@ -99,6 +105,15 @@ export function BlockRenderer({
           )}
           {block.type === 'TABLE' && <TableBlockComponent block={block} />}
           {block.type === 'PDF' && <PdfBlockComponent block={block} />}
+          {block.type === 'GAME' && (
+            <GameBlockRenderer
+              block={block}
+              blockIndex={index}
+              variant={variant}
+              savedResult={savedGameResults?.[index]}
+              onGameComplete={onGameComplete}
+            />
+          )}
         </div>
       ))}
     </div>
