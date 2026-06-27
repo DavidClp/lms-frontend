@@ -1,8 +1,8 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { gamificationApi, modulesApi, lessonsApi, usersApi, progressApi, platformConfigApi } from '@/lib/api'
-import type { ModuleFormData, LessonFormData, UserFormData, AvatarConfig } from '@/types'
+import { gamificationApi, modulesApi, lessonsApi, usersApi, progressApi, platformConfigApi, gamesApi } from '@/lib/api'
+import type { ModuleFormData, LessonFormData, UserFormData, AvatarConfig, GameFormData } from '@/types'
 
 // Modules hooks
 export function useModules() {
@@ -268,6 +268,76 @@ export function useUpdatePlatformConfig() {
     mutationFn: platformConfigApi.update,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['platform-config'] })
+    },
+  })
+}
+
+export function useGames() {
+  return useQuery({
+    queryKey: ['games'],
+    queryFn: gamesApi.getAll,
+  })
+}
+
+export function useGame(id: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['games', id],
+    queryFn: () => gamesApi.getById(id),
+    enabled: !!id && (options?.enabled ?? true),
+  })
+}
+
+export function useCreateGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: GameFormData) => gamesApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] })
+    },
+  })
+}
+
+export function useUpdateGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<GameFormData> & { regenerateGrid?: boolean } }) =>
+      gamesApi.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['games'] })
+      queryClient.invalidateQueries({ queryKey: ['games', id] })
+    },
+  })
+}
+
+export function useDeleteGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => gamesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] })
+    },
+  })
+}
+
+export function useRegenerateGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => gamesApi.regenerate(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['games'] })
+      queryClient.invalidateQueries({ queryKey: ['games', id] })
+    },
+  })
+}
+
+export function useCompleteGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: { timeMs?: number; foundCount?: number; wrongGuesses?: number; won?: boolean } }) =>
+      gamesApi.complete(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] })
+      queryClient.invalidateQueries({ queryKey: ['gamification'] })
     },
   })
 }
