@@ -16,6 +16,8 @@ interface BlockRendererKidsProps {
   savedQuizResults?: Record<number, QuizResultItem[]>
   checklistState?: Record<number, boolean[]>
   onChecklistChange?: (blockIndex: number, checked: boolean[]) => void
+  savedGameResults?: Record<number, import('@/types').GameResultItem>
+  onGameComplete?: (blockIndex: number, result: import('@/types').GameResultItem) => void
 }
 
 export function BlockRendererKids({
@@ -27,6 +29,8 @@ export function BlockRendererKids({
   savedQuizResults,
   checklistState,
   onChecklistChange,
+  savedGameResults,
+  onGameComplete,
 }: BlockRendererKidsProps) {
   const block = blocks[blockIndex]
   if (!block) return null
@@ -42,6 +46,8 @@ export function BlockRendererKids({
         variant="kids"
         checklistState={checklistState}
         onChecklistChange={onChecklistChange}
+        savedGameResults={savedGameResults}
+        onGameComplete={onGameComplete}
       />
     </div>
   )

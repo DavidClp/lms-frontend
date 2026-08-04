@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
-import { Home, Map, User, LogOut } from 'lucide-react'
+import { Home, Map, User, LogOut, Gamepad2 } from 'lucide-react'
 import { useGamification } from '@/hooks/use-api'
 import { KidsLogo } from '@/components/kids/kids-brand'
 import { AvatarDisplay } from '@/components/kids/avatar-display'
@@ -13,6 +13,7 @@ import type { AvatarConfig } from '@/types'
 const navItems = [
   { href: '/dashboard', label: 'Início', icon: Home },
   { href: '/modules', label: 'Mapa', icon: Map },
+  { href: '/games', label: 'Jogos', icon: Gamepad2 },
   { href: '/profile', label: 'Perfil', icon: User },
 ]
 
@@ -118,7 +119,7 @@ export function KidsLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 border-t-2 border-[#BFDBFE] bg-white/95 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-3 gap-1 p-2">
+        <div className="grid grid-cols-4 gap-1 p-2">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

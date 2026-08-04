@@ -65,6 +65,7 @@ export type BlockType =
   | 'IFRAME'
   | 'TABLE'
   | 'PDF'
+  | 'GAME'
 
 export interface TextBlock {
   type: 'TEXT'
@@ -174,6 +175,104 @@ export interface PdfBlock {
   title?: string
 }
 
+export interface GameBlock {
+  type: 'GAME'
+  gameId: string
+  title?: string
+}
+
+export type GameType = 'WORD_SEARCH' | 'HANGMAN'
+export type GameDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
+
+export interface WordPlacement {
+  word: string
+  displayWord: string
+  row: number
+  col: number
+  dr: number
+  dc: number
+}
+
+export interface WordSearchConfig {
+  words: string[]
+  difficulty: GameDifficulty
+  allowDiagonal?: boolean
+  allowBackwards?: boolean
+  timeLimitSeconds?: number | null
+  gridSize: number
+  grid: string[][]
+  placements: WordPlacement[]
+}
+
+export interface HangmanConfig {
+  secretWord?: string
+  displayWord: string
+  hint: string
+  category?: string | null
+  difficulty: GameDifficulty
+  maxWrongGuesses: number
+  wordLength: number
+}
+
+export interface Game {
+  id: string
+  title: string
+  description?: string | null
+  type: GameType
+  difficulty: GameDifficulty
+  config: WordSearchConfig | HangmanConfig
+  isActive: boolean
+  order: number
+  createdAt?: string
+  updatedAt?: string
+  userProgress?: GameUserProgress | null
+}
+
+export interface GameUserProgress {
+  completed: boolean
+  completedAt?: string | null
+  stats?: Record<string, unknown> | null
+}
+
+export type GameFormData =
+  | {
+      type: 'WORD_SEARCH'
+      title: string
+      description?: string | null
+      difficulty: GameDifficulty
+      isActive?: boolean
+      order?: number
+      config: {
+        words: string[]
+        difficulty: GameDifficulty
+        allowDiagonal?: boolean
+        allowBackwards?: boolean
+        timeLimitSeconds?: number | null
+        gridSize?: number | null
+      }
+    }
+  | {
+      type: 'HANGMAN'
+      title: string
+      description?: string | null
+      difficulty: GameDifficulty
+      isActive?: boolean
+      order?: number
+      config: {
+        secretWord: string
+        hint: string
+        category?: string | null
+        difficulty: GameDifficulty
+        maxWrongGuesses?: number | null
+      }
+    }
+
+export interface GameCompleteResponse {
+  progress: GameUserProgress & { id: string; userId: string; gameId: string }
+  gamification?: GamificationSnapshot | null
+  xpEarned: number
+}
+
 export type ContentBlock =
   | TextBlock
   | VideoBlock
@@ -184,6 +283,7 @@ export type ContentBlock =
   | OpenQuestionBlock
   | TableBlock
   | PdfBlock
+  | GameBlock
 
 /** Resultados do quiz por bloco (índice): lista de acerto/erro por pergunta */
 export type QuizResultsByBlock = Record<string, { questionId: string; correct: boolean }[]>
@@ -193,6 +293,14 @@ export type OpenQuestionAnswersByBlock = Record<string, string>
 
 /** Estado de checklist por índice do bloco */
 export type ChecklistStateByBlock = Record<string, boolean[]>
+
+export interface GameResultItem {
+  completed: boolean
+  timeMs?: number
+  foundWords: string[]
+}
+
+export type GameResultsByBlock = Record<string, GameResultItem>
 
 export interface Progress {
   id: string
@@ -206,6 +314,7 @@ export interface Progress {
   quizResults?: QuizResultsByBlock
   openQuestionAnswers?: OpenQuestionAnswersByBlock
   checklistState?: ChecklistStateByBlock
+  gameResults?: GameResultsByBlock
   gamification?: GamificationSnapshot | null
 }
 

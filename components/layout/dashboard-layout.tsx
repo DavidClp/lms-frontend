@@ -28,6 +28,7 @@ import {
   LogOut,
   ChevronLeft,
   Sparkles,
+  Gamepad2,
 } from 'lucide-react'
 
 const adminNavItems = [
@@ -36,6 +37,7 @@ const adminNavItems = [
   { href: '/admin/lessons', label: 'Aulas (Adultos)', icon: FileText },
   { href: '/admin/kids/modules', label: 'Mundos Kids', icon: Sparkles },
   { href: '/admin/kids/lessons', label: 'Missões Kids', icon: GraduationCap },
+  { href: '/admin/kids/games', label: 'Jogos Kids', icon: Gamepad2 },
   { href: '/admin/students', label: 'Alunos', icon: Users },
   { href: '/admin/settings', label: 'Configurações', icon: Settings },
 ]

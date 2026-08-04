@@ -13,6 +13,9 @@ import type {
   PlatformConfig,
   GamificationMe,
   AvatarConfig,
+  Game,
+  GameFormData,
+  GameCompleteResponse,
 } from '@/types'
 import {
   mockUsers,
@@ -291,6 +294,15 @@ export const progressApi = {
       method: 'POST',
       body: JSON.stringify({ lessonId, blockIndex, checked }),
     }),
+  saveGameResult: (
+    lessonId: string,
+    blockIndex: number,
+    data: { completed: boolean; timeMs?: number; foundWords?: string[] },
+  ) =>
+    fetchApi<Progress>('/progress/game', {
+      method: 'POST',
+      body: JSON.stringify({ lessonId, blockIndex, ...data }),
+    }),
 }
 
 export const gamificationApi = {
@@ -299,5 +311,33 @@ export const gamificationApi = {
     fetchApi<GamificationMe>('/gamification/avatar', {
       method: 'PUT',
       body: JSON.stringify(avatarConfig),
+    }),
+}
+
+export const gamesApi = {
+  getAll: () => fetchApi<Game[]>('/games'),
+  getById: (id: string) => fetchApi<Game>(`/games/${id}`),
+  create: (data: GameFormData) =>
+    fetchApi<Game>('/games', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Partial<GameFormData> & { regenerateGrid?: boolean }) =>
+    fetchApi<Game>(`/games/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  regenerate: (id: string) =>
+    fetchApi<Game>(`/games/${id}/regenerate`, {
+      method: 'POST',
+    }),
+  delete: (id: string) =>
+    fetchApi<void>(`/games/${id}`, {
+      method: 'DELETE',
+    }),
+  complete: (id: string, data?: { timeMs?: number; foundCount?: number; wrongGuesses?: number; won?: boolean }) =>
+    fetchApi<GameCompleteResponse>(`/games/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify(data ?? {}),
     }),
 }
