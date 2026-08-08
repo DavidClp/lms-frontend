@@ -289,6 +289,33 @@ export const progressApi = {
       method: 'POST',
       body: JSON.stringify({ lessonId, blockIndex, answer }),
     }),
+  saveActivityUpload: async (lessonId: string, blockIndex: number, file: File): Promise<Progress> => {
+    const token = localStorage.getItem('lms_token')
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('lessonId', lessonId)
+    formData.append('blockIndex', String(blockIndex))
+    const response = await fetch(`${API_URL}/progress/activity-upload`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    if (!response.ok) {
+      let message = response.statusText
+      try {
+        const data = (await response.json()) as { message?: string }
+        if (data?.message) message = data.message
+      } catch {
+        /* ignore */
+      }
+      throw new Error(message || `API Error: ${response.statusText}`)
+    }
+    return response.json()
+  },
+  getActivityUploadUrl: (lessonId: string, blockIndex: number) =>
+    fetchApi<{ url: string; fileName: string; contentType: string }>(
+      `/progress/activity-upload/${lessonId}/${blockIndex}`,
+    ),
   saveChecklistState: (lessonId: string, blockIndex: number, checked: boolean[]) =>
     fetchApi<Progress>('/progress/checklist', {
       method: 'POST',

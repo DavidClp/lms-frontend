@@ -25,6 +25,7 @@ interface KidsLessonViewProps {
   sortedLessons: Lesson[]
   onComplete: () => Promise<{ gamification?: GamificationSnapshot | null }>
   isCompleting: boolean
+  activityUploadsDone?: boolean
 }
 
 export function KidsLessonView({
@@ -35,6 +36,7 @@ export function KidsLessonView({
   sortedLessons,
   onComplete,
   isCompleting,
+  activityUploadsDone = true,
 }: KidsLessonViewProps) {
   const queryClient = useQueryClient()
   const blocks = lesson.content ?? []
@@ -84,6 +86,16 @@ export function KidsLessonView({
     })
   }
 
+  const savedActivityUploads: Record<number, import('@/types').ActivityUploadMeta> = {}
+  if (progress?.activityUploads) {
+    Object.entries(progress.activityUploads).forEach(([key, value]) => {
+      const index = parseInt(key, 10)
+      if (!Number.isNaN(index) && value?.key) {
+        savedActivityUploads[index] = value
+      }
+    })
+  }
+
   const mascotMessage = useMemo(() => {
     if (currentStep === 0) return module?.kidsMeta?.mascotIntro ?? KIDS_MESSAGES.missionStart
     if (currentStep >= totalSteps - 1) return 'Último passo! Você consegue!'
@@ -107,6 +119,15 @@ export function KidsLessonView({
     async (blockIndex: number, answer: string) => {
       await progressApi.saveOpenQuestionAnswer(lesson.id, blockIndex, answer)
       queryClient.invalidateQueries({ queryKey: ['progress'] })
+    },
+    [lesson.id, queryClient],
+  )
+
+  const handleActivityUpload = useCallback(
+    async (blockIndex: number, file: File) => {
+      await progressApi.saveActivityUpload(lesson.id, blockIndex, file)
+      await queryClient.invalidateQueries({ queryKey: ['progress'] })
+      toast.success('Arquivo enviado!')
     },
     [lesson.id, queryClient],
   )
@@ -139,6 +160,10 @@ export function KidsLessonView({
   const handleFinishMission = async () => {
     if (isCompleted) {
       setShowVictory(true)
+      return
+    }
+    if (!activityUploadsDone) {
+      toast.error('Envie o arquivo de todas as atividades antes de completar a missão.')
       return
     }
     try {
@@ -198,6 +223,8 @@ export function KidsLessonView({
               onChecklistChange={handleChecklistChange}
               savedGameResults={savedGameResults}
               onGameComplete={handleGameComplete}
+              savedActivityUploads={savedActivityUploads}
+              onActivityUpload={handleActivityUpload}
             />
           )}
         </CardContent>
@@ -213,14 +240,21 @@ export function KidsLessonView({
             Próximo Passo →
           </Button>
         ) : (
-          <Button
-            size="lg"
-            className="min-h-14 text-lg font-bold w-full"
-            onClick={handleFinishMission}
-            disabled={isCompleting}
-          >
-            {isCompleting ? <Spinner className="h-5 w-5" /> : isCompleted ? 'Ver Vitória 🎉' : 'Completar Missão! 🚀'}
-          </Button>
+          <>
+            <Button
+              size="lg"
+              className="min-h-14 text-lg font-bold w-full"
+              onClick={handleFinishMission}
+              disabled={isCompleting || (!isCompleted && !activityUploadsDone)}
+            >
+              {isCompleting ? <Spinner className="h-5 w-5" /> : isCompleted ? 'Ver Vitória 🎉' : 'Completar Missão! 🚀'}
+            </Button>
+            {!isCompleted && !activityUploadsDone && (
+              <p className="text-sm text-muted-foreground text-center">
+                Envie o arquivo de todas as atividades para liberar a conclusão.
+              </p>
+            )}
+          </>
         )}
         {currentStep > 0 && (
           <Button variant="outline" size="lg" className="min-h-12" onClick={() => setCurrentStep((s) => s - 1)}>

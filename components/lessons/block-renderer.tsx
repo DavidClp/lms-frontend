@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock, PdfBlock } from '@/types'
+import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock, PdfBlock, ActivityUploadBlock, ActivityUploadMeta } from '@/types'
 import { normalizeImagesBlock } from '@/types'
-import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw, Table2, FileType } from 'lucide-react'
+import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw, Table2, FileType, Upload, Loader2 } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { getYouTubeStartSeconds } from '@/lib/youtube-start'
@@ -37,6 +37,10 @@ interface BlockRendererProps {
   savedOpenAnswers?: Record<number, string>
   /** Chamado quando o aluno clica em Salvar em uma atividade de pergunta em texto. Opcional. */
   onSaveOpenQuestion?: (blockIndex: number, answer: string) => void
+  /** Metadados de arquivos já enviados por índice de bloco. Opcional. */
+  savedActivityUploads?: Record<number, ActivityUploadMeta>
+  /** Chamado quando o aluno seleciona um arquivo para enviar. Opcional. */
+  onActivityUpload?: (blockIndex: number, file: File) => Promise<void>
   /** Resultados já salvos do quiz por bloco (histórico imutável). Quando existe, o aluno não pode enviar de novo. Opcional. */
   savedQuizResults?: Record<number, QuizResultItem[]>
   /** Estado persistido de checklist por índice de bloco */
@@ -52,6 +56,8 @@ export function BlockRenderer({
   onQuizResult,
   savedOpenAnswers,
   onSaveOpenQuestion,
+  savedActivityUploads,
+  onActivityUpload,
   savedQuizResults,
   checklistState,
   onChecklistChange,
@@ -101,6 +107,14 @@ export function BlockRenderer({
               blockIndex={index}
               initialAnswer={savedOpenAnswers?.[index] ?? ''}
               onSave={onSaveOpenQuestion}
+            />
+          )}
+          {block.type === 'ACTIVITY_UPLOAD' && (
+            <ActivityUploadBlockComponent
+              block={block}
+              blockIndex={index}
+              savedUpload={savedActivityUploads?.[index]}
+              onUpload={onActivityUpload}
             />
           )}
           {block.type === 'TABLE' && <TableBlockComponent block={block} />}
@@ -680,6 +694,116 @@ function OpenQuestionBlockComponent({
                 <CheckCircle className="h-4 w-4" /> Salvo!
               </span>
             )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+const ACTIVITY_UPLOAD_ACCEPT =
+  '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.zip'
+
+function ActivityUploadBlockComponent({
+  block,
+  blockIndex,
+  savedUpload,
+  onUpload,
+}: {
+  block: ActivityUploadBlock
+  blockIndex: number
+  savedUpload?: ActivityUploadMeta
+  onUpload?: (blockIndex: number, file: File) => Promise<void>
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [localMeta, setLocalMeta] = useState<ActivityUploadMeta | undefined>(savedUpload)
+
+  useEffect(() => {
+    setLocalMeta(savedUpload)
+  }, [savedUpload])
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !onUpload) return
+    setError(null)
+    setUploading(true)
+    try {
+      await onUpload(blockIndex, file)
+      setLocalMeta({
+        key: 'pending',
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao enviar arquivo')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Upload className="h-5 w-5 text-primary" />
+          Subir atividade
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-4">
+        <p className="text-lg font-medium whitespace-pre-wrap">
+          {block.description || 'Envie o arquivo da atividade.'}
+        </p>
+        {localMeta?.fileName && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+            <span className="truncate">
+              Arquivo enviado: <strong>{localMeta.fileName}</strong>
+            </span>
+          </div>
+        )}
+        {onUpload && (
+          <div className="space-y-2">
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ACTIVITY_UPLOAD_ACCEPT}
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={uploading}
+            />
+            <Button
+              type="button"
+              variant={localMeta ? 'outline' : 'default'}
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              className="gap-2"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : localMeta ? (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Trocar arquivo
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Escolher arquivo
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              PDF, Word, Excel, PowerPoint, imagem, TXT ou ZIP · máx. 20 MB
+            </p>
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         )}
       </CardContent>

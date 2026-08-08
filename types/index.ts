@@ -62,6 +62,7 @@ export type BlockType =
   | 'QUIZ'
   | 'IMAGES'
   | 'OPEN_QUESTION'
+  | 'ACTIVITY_UPLOAD'
   | 'IFRAME'
   | 'TABLE'
   | 'PDF'
@@ -154,6 +155,12 @@ export function normalizeImagesBlock(block: ContentBlock): ImagesBlock | null {
 export interface OpenQuestionBlock {
   type: 'OPEN_QUESTION'
   question: string
+}
+
+/** Atividade em que o aluno envia 1 arquivo (entrega) */
+export interface ActivityUploadBlock {
+  type: 'ACTIVITY_UPLOAD'
+  description: string
 }
 
 /** Tabela de conteúdo (células em texto simples) */
@@ -281,6 +288,7 @@ export type ContentBlock =
   | QuizBlock
   | ImagesBlock
   | OpenQuestionBlock
+  | ActivityUploadBlock
   | TableBlock
   | PdfBlock
   | GameBlock
@@ -290,6 +298,17 @@ export type QuizResultsByBlock = Record<string, { questionId: string; correct: b
 
 /** Respostas de atividade (pergunta em texto) por índice do bloco */
 export type OpenQuestionAnswersByBlock = Record<string, string>
+
+/** Entregas de arquivo por índice do bloco */
+export interface ActivityUploadMeta {
+  key: string
+  fileName: string
+  contentType: string
+  size: number
+  uploadedAt: string
+}
+
+export type ActivityUploadsByBlock = Record<string, ActivityUploadMeta>
 
 /** Estado de checklist por índice do bloco */
 export type ChecklistStateByBlock = Record<string, boolean[]>
@@ -313,6 +332,7 @@ export interface Progress {
   completedAt?: string
   quizResults?: QuizResultsByBlock
   openQuestionAnswers?: OpenQuestionAnswersByBlock
+  activityUploads?: ActivityUploadsByBlock
   checklistState?: ChecklistStateByBlock
   gameResults?: GameResultsByBlock
   gamification?: GamificationSnapshot | null

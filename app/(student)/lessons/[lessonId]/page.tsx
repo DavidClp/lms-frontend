@@ -79,9 +79,31 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
       }
     })
   }
+  const savedActivityUploads: Record<number, import('@/types').ActivityUploadMeta> = {}
+  if (lessonProgress?.activityUploads) {
+    Object.entries(lessonProgress.activityUploads).forEach(([key, value]) => {
+      const index = parseInt(key, 10)
+      if (!Number.isNaN(index) && value?.key) {
+        savedActivityUploads[index] = value
+      }
+    })
+  }
+
+  const allActivityUploadsDone = useMemo(() => {
+    const content = lesson?.content ?? []
+    const requiredIndexes = content
+      .map((b, i) => (b.type === 'ACTIVITY_UPLOAD' ? i : -1))
+      .filter((i) => i >= 0)
+    if (requiredIndexes.length === 0) return true
+    return requiredIndexes.every((i) => !!savedActivityUploads[i]?.key)
+  }, [lesson?.content, savedActivityUploads])
 
   const handleMarkComplete = async (): Promise<{ gamification?: import('@/types').GamificationSnapshot | null }> => {
     if (!user) return {}
+    if (!allActivityUploadsDone) {
+      toast.error('Envie o arquivo de todas as atividades antes de concluir a aula.')
+      throw new Error('activity uploads pending')
+    }
     try {
       const result = await markComplete.mutateAsync({
         lessonId,
@@ -111,6 +133,15 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
     async (blockIndex: number, answer: string) => {
       await progressApi.saveOpenQuestionAnswer(lessonId, blockIndex, answer)
       queryClient.invalidateQueries({ queryKey: ['progress'] })
+    },
+    [lessonId, queryClient]
+  )
+
+  const handleActivityUpload = useCallback(
+    async (blockIndex: number, file: File) => {
+      await progressApi.saveActivityUpload(lessonId, blockIndex, file)
+      await queryClient.invalidateQueries({ queryKey: ['progress'] })
+      toast.success('Arquivo enviado!')
     },
     [lessonId, queryClient]
   )
@@ -172,6 +203,7 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
         sortedLessons={sortedModuleLessons}
         onComplete={handleMarkComplete}
         isCompleting={markComplete.isPending}
+        activityUploadsDone={allActivityUploadsDone}
       />
     )
   }
@@ -213,6 +245,8 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
                 savedOpenAnswers={savedOpenAnswers}
                 onSaveOpenQuestion={handleSaveOpenQuestion}
                 savedQuizResults={savedQuizResults}
+                savedActivityUploads={savedActivityUploads}
+                onActivityUpload={handleActivityUpload}
               />
 
               {(!lesson.content || lesson.content.length === 0) && (
@@ -252,19 +286,26 @@ export default function StudentLessonPage({ params }: { params: Promise<{ lesson
 
       <div className="flex flex-col items-center gap-3">
         {!isCompleted ? (
-          <Button
-            size="lg"
-            onClick={handleMarkComplete}
-            disabled={markComplete.isPending}
-            className="gap-2"
-          >
-            {markComplete.isPending ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              <Circle className="h-4 w-4" />
+          <>
+            <Button
+              size="lg"
+              onClick={handleMarkComplete}
+              disabled={markComplete.isPending || !allActivityUploadsDone}
+              className="gap-2"
+            >
+              {markComplete.isPending ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                <Circle className="h-4 w-4" />
+              )}
+              Marcar como Concluída
+            </Button>
+            {!allActivityUploadsDone && (
+              <p className="text-sm text-muted-foreground text-center max-w-md">
+                Envie o arquivo de todas as atividades &quot;Subir atividade&quot; para liberar a conclusão.
+              </p>
             )}
-            Marcar como Concluída
-          </Button>
+          </>
         ) : loadingModuleLessons ? (
           <Spinner className="h-8 w-8" />
         ) : (

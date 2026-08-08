@@ -6,6 +6,7 @@ import {
   type QuizResultItem,
 } from '@/components/lessons/block-renderer'
 import { cn } from '@/lib/utils'
+import type { ActivityUploadMeta, GameResultItem } from '@/types'
 
 interface BlockRendererKidsProps {
   blocks: ContentBlock[]
@@ -16,8 +17,10 @@ interface BlockRendererKidsProps {
   savedQuizResults?: Record<number, QuizResultItem[]>
   checklistState?: Record<number, boolean[]>
   onChecklistChange?: (blockIndex: number, checked: boolean[]) => void
-  savedGameResults?: Record<number, import('@/types').GameResultItem>
-  onGameComplete?: (blockIndex: number, result: import('@/types').GameResultItem) => void
+  savedGameResults?: Record<number, GameResultItem>
+  onGameComplete?: (blockIndex: number, result: GameResultItem) => void
+  savedActivityUploads?: Record<number, ActivityUploadMeta>
+  onActivityUpload?: (blockIndex: number, file: File) => Promise<void>
 }
 
 export function BlockRendererKids({
@@ -31,23 +34,56 @@ export function BlockRendererKids({
   onChecklistChange,
   savedGameResults,
   onGameComplete,
+  savedActivityUploads,
+  onActivityUpload,
 }: BlockRendererKidsProps) {
   const block = blocks[blockIndex]
   if (!block) return null
+
+  const remappedOpen =
+    savedOpenAnswers?.[blockIndex] !== undefined
+      ? { 0: savedOpenAnswers[blockIndex] }
+      : undefined
+  const remappedQuiz =
+    savedQuizResults?.[blockIndex] !== undefined
+      ? { 0: savedQuizResults[blockIndex] }
+      : undefined
+  const remappedChecklist =
+    checklistState?.[blockIndex] !== undefined
+      ? { 0: checklistState[blockIndex] }
+      : undefined
+  const remappedGame =
+    savedGameResults?.[blockIndex] !== undefined
+      ? { 0: savedGameResults[blockIndex] }
+      : undefined
+  const remappedUpload =
+    savedActivityUploads?.[blockIndex] !== undefined
+      ? { 0: savedActivityUploads[blockIndex] }
+      : undefined
 
   return (
     <div className={cn('kids-block text-lg leading-relaxed [&_p]:text-lg [&_p]:leading-relaxed')}>
       <BlockRenderer
         blocks={[block]}
-        onQuizResult={onQuizResult}
-        savedOpenAnswers={savedOpenAnswers}
-        onSaveOpenQuestion={onSaveOpenQuestion}
-        savedQuizResults={savedQuizResults}
+        onQuizResult={onQuizResult ? (_i, results) => onQuizResult(blockIndex, results) : undefined}
+        savedOpenAnswers={remappedOpen}
+        onSaveOpenQuestion={
+          onSaveOpenQuestion ? (_i, answer) => onSaveOpenQuestion(blockIndex, answer) : undefined
+        }
+        savedQuizResults={remappedQuiz}
         variant="kids"
-        checklistState={checklistState}
-        onChecklistChange={onChecklistChange}
-        savedGameResults={savedGameResults}
-        onGameComplete={onGameComplete}
+        checklistState={remappedChecklist}
+        onChecklistChange={
+          onChecklistChange ? (_i, checked) => onChecklistChange(blockIndex, checked) : undefined
+        }
+        savedGameResults={remappedGame}
+        onGameComplete={
+          onGameComplete ? (_i, result) => onGameComplete(blockIndex, result) : undefined
+        }
+        savedActivityUploads={remappedUpload}
+        onActivityUpload={
+          onActivityUpload ? (_i, file) => onActivityUpload(blockIndex, file) : undefined
+        }
       />
     </div>
   )

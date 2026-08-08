@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType, Gamepad2 } from 'lucide-react'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType, Gamepad2, Upload } from 'lucide-react'
 import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock, GameBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
@@ -52,6 +52,7 @@ function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
   if (type === 'IMAGES') return { type: 'IMAGES', images: [], cardWithBorder: true, imageLayout: 'column' }
   if (type === 'OPEN_QUESTION') return { type: 'OPEN_QUESTION', question: '' }
+  if (type === 'ACTIVITY_UPLOAD') return { type: 'ACTIVITY_UPLOAD', description: '' }
   if (type === 'TABLE')
     return {
       type: 'TABLE',
@@ -229,6 +230,14 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
                   }
                 />
               )}
+              {block.type === 'ACTIVITY_UPLOAD' && (
+                <ActivityUploadBlockEditor
+                  description={block.description}
+                  onChange={(description) =>
+                    updateBlock(index, { type: 'ACTIVITY_UPLOAD', description })
+                  }
+                />
+              )}
               {block.type === 'TABLE' && (
                 <TableBlockEditor
                   block={block}
@@ -294,6 +303,11 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
                 <PenLine className="h-4 w-4" /> Pergunta (resposta em texto)
               </div>
             </SelectItem>
+            <SelectItem value="ACTIVITY_UPLOAD">
+              <div className="flex items-center gap-2">
+                <Upload className="h-4 w-4" /> Subir atividade
+              </div>
+            </SelectItem>
             <SelectItem value="TABLE">
               <div className="flex items-center gap-2">
                 <Table2 className="h-4 w-4" /> Tabela
@@ -331,6 +345,7 @@ const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: React.ReactNo
   { value: 'QUIZ', label: 'Quiz', icon: <HelpCircle className="h-4 w-4" /> },
   { value: 'IMAGES', label: 'Imagens', icon: <ImageIcon className="h-4 w-4" /> },
   { value: 'OPEN_QUESTION', label: 'Pergunta (texto)', icon: <PenLine className="h-4 w-4" /> },
+  { value: 'ACTIVITY_UPLOAD', label: 'Subir atividade', icon: <Upload className="h-4 w-4" /> },
   { value: 'TABLE', label: 'Tabela', icon: <Table2 className="h-4 w-4" /> },
   { value: 'PDF', label: 'PDF', icon: <FileType className="h-4 w-4" /> },
 ]
@@ -724,6 +739,38 @@ function OpenQuestionBlockEditor({
             rows={3}
           />
         </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActivityUploadBlockEditor({
+  description,
+  onChange,
+}: {
+  description: string
+  onChange: (description: string) => void
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Upload className="h-4 w-4" /> Subir atividade
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <Label>Descrição / enunciado</Label>
+          <Textarea
+            value={description}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Explique o que o aluno deve enviar (ex.: planilha da atividade do mês)..."
+            rows={4}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          O aluno verá um campo para enviar 1 arquivo. A aula só poderá ser concluída após o envio.
+        </p>
       </CardContent>
     </Card>
   )
