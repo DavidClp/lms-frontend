@@ -57,6 +57,8 @@ export interface Lesson {
 
 export type BlockType =
   | 'TEXT'
+  | 'SECTION'
+  | 'CALLOUT'
   | 'VIDEO'
   | 'ACTIVITY_CHECKLIST'
   | 'QUIZ'
@@ -70,6 +72,24 @@ export type BlockType =
 
 export interface TextBlock {
   type: 'TEXT'
+  value: string
+}
+
+export interface SectionBlock {
+  type: 'SECTION'
+  level: 1 | 2
+  eyebrow?: string
+  title: string
+  subtitle?: string
+}
+
+export type CalloutVariant = 'tip' | 'example' | 'warning' | 'note' | 'exercise'
+
+export interface CalloutBlock {
+  type: 'CALLOUT'
+  variant: CalloutVariant
+  icon?: string
+  title?: string
   value: string
 }
 
@@ -109,6 +129,7 @@ export interface QuizQuestion {
   question: string
   options: QuizOption[]
   correctOptionId: string
+  explanation?: string
 }
 
 export interface QuizBlock {
@@ -134,13 +155,17 @@ export interface ImagesBlock {
   cardWithBorder?: boolean
   /** Direção do flex: coluna (vertical) ou linha (horizontal). Padrão: column. */
   imageLayout?: ImageLayout
+  placeholder?: {
+    title: string
+    description: string
+  }
 }
 
 /** Normaliza bloco de imagens vindo da API (pode ser formato antigo imageIds + caption). */
 export function normalizeImagesBlock(block: ContentBlock): ImagesBlock | null {
   if (block.type !== 'IMAGES') return null
   const b = block as ImagesBlock & { imageIds?: string[]; caption?: string }
-  if (Array.isArray(b.images)) return { type: 'IMAGES', images: b.images, cardWithBorder: b.cardWithBorder, imageLayout: b.imageLayout ?? 'column' }
+  if (Array.isArray(b.images)) return { type: 'IMAGES', images: b.images, cardWithBorder: b.cardWithBorder, imageLayout: b.imageLayout ?? 'column', placeholder: b.placeholder }
   if (Array.isArray(b.imageIds))
     return {
       type: 'IMAGES',
@@ -282,6 +307,8 @@ export interface GameCompleteResponse {
 
 export type ContentBlock =
   | TextBlock
+  | SectionBlock
+  | CalloutBlock
   | VideoBlock
   | IframeBlock
   | ActivityChecklistBlock

@@ -87,7 +87,7 @@ const FontFamily = Extension.create({
 
 // Tamanhos de 10 a 30 (em px)
 const FONT_SIZES = [
-  { label: 'Padrão', value: '' },
+  { label: '16 (padrão)', value: '' },
   ...Array.from({ length: 21 }, (_, i) => {
     const px = i + 10
     return { label: `${px}`, value: `${px}px` }
@@ -177,7 +177,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm dark:prose-invert max-w-none min-h-[80px] px-3 py-2 focus:outline-none [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6',
+          'prose prose-base dark:prose-invert max-w-none text-base min-h-[80px] px-3 py-2 focus:outline-none [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6',
       },
     },
   }, [])

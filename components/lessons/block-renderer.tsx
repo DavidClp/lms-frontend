@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock, PdfBlock, ActivityUploadBlock, ActivityUploadMeta } from '@/types'
+import type { ContentBlock, QuizBlock, QuizQuestion, ImagesBlock, OpenQuestionBlock, TableBlock, PdfBlock, ActivityUploadBlock, ActivityUploadMeta, SectionBlock, CalloutBlock } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { Video, CheckSquare, HelpCircle, CheckCircle, XCircle, ImageIcon, PenLine, RotateCcw, Table2, FileType, Upload, Loader2 } from 'lucide-react'
 import { imagesApi } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { cn, getQuizOptionLabel } from '@/lib/utils'
 import { getYouTubeStartSeconds } from '@/lib/youtube-start'
 import { Textarea } from '@/components/ui/textarea'
 import { PdfViewer } from '@/components/lessons/pdf-viewer'
@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'u', 'a', 'span', 'ul', 'ol', 'li']
+const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'u', 'a', 'span', 'ul', 'ol', 'li', 'code']
 const ALLOWED_ATTR = ['href', 'target', 'rel', 'style']
 
 export type QuizResultItem = { questionId: string; correct: boolean }
@@ -69,6 +69,8 @@ export function BlockRenderer({
       {blocks?.map((block, index) => (
         <div key={index}>
           {block.type === 'TEXT' && <TextBlockComponent value={block.value} />}
+          {block.type === 'SECTION' && <SectionBlockComponent block={block} />}
+          {block.type === 'CALLOUT' && <CalloutBlockComponent block={block} />}
           {block.type === 'VIDEO' && (
             <VideoBlockComponent
               url={block.url}
@@ -233,16 +235,69 @@ function TableBlockComponent({ block }: { block: TableBlock }) {
   )
 }
 
+const CALLOUT_STYLES: Record<CalloutBlock['variant'], { bg: string; border: string; title: string }> = {
+  tip: { bg: 'bg-[#E6F4EA]', border: 'border-[#1E7145]/30', title: 'text-[#0F5132]' },
+  example: { bg: 'bg-[#E6F4EA]', border: 'border-[#1E7145]/30', title: 'text-[#0F5132]' },
+  warning: { bg: 'bg-amber-50', border: 'border-amber-300', title: 'text-amber-900' },
+  exercise: { bg: 'bg-[#EAF2FB]', border: 'border-[#1B4F72]/30', title: 'text-[#1B4F72]' },
+  note: { bg: 'bg-muted/40', border: 'border-border', title: 'text-foreground' },
+}
+
+function SectionBlockComponent({ block }: { block: SectionBlock }) {
+  const isMain = block.level === 1
+  return (
+    <div className="space-y-1">
+      {block.eyebrow && (
+        <p className="text-sm font-bold uppercase tracking-wide text-[#0E7C7B]">{block.eyebrow}</p>
+      )}
+      <h2
+        className={cn(
+          'font-bold leading-tight',
+          isMain ? 'text-[28px] text-[#0F5132] md:text-[30px]' : 'text-[22px] text-[#1E7145] md:text-2xl'
+        )}
+      >
+        {block.title}
+      </h2>
+      {block.subtitle && (
+        <p className="text-base text-muted-foreground italic">{block.subtitle}</p>
+      )}
+    </div>
+  )
+}
+
+function CalloutBlockComponent({ block }: { block: CalloutBlock }) {
+  const styles = CALLOUT_STYLES[block.variant]
+  const sanitized = stripInlineFontSize(DOMPurify.sanitize(block.value, { ALLOWED_TAGS, ALLOWED_ATTR }))
+  return (
+    <div className={cn('rounded-lg border p-4', styles.bg, styles.border)}>
+      {(block.icon || block.title) && (
+        <p className={cn('mb-2 text-base font-bold', styles.title)}>
+          {block.icon ? `${block.icon} ` : ''}{block.title}
+        </p>
+      )}
+      {sanitized && (
+        <div
+          className="prose prose-base max-w-none text-base leading-relaxed text-foreground [&_p]:mb-2 [&_p:last-child]:mb-0 [&_code]:rounded [&_code]:bg-black/5 [&_code]:px-1 [&_span]:text-[length:inherit]"
+          dangerouslySetInnerHTML={{ __html: sanitized }}
+        />
+      )}
+    </div>
+  )
+}
+
+function stripInlineFontSize(html: string): string {
+  return html.replace(/\s*font-size\s*:\s*[^;"]+;?/gi, '')
+}
+
 function TextBlockComponent({ value }: { value: string }) {
   const isHtml = /<[a-z][\s\S]*>/i.test(value)
   const sanitized = isHtml
-    ? DOMPurify.sanitize(value, { ALLOWED_TAGS, ALLOWED_ATTR })
+    ? stripInlineFontSize(DOMPurify.sanitize(value, { ALLOWED_TAGS, ALLOWED_ATTR }))
     : ''
   const isPlainText = !isHtml || sanitized.replace(/<[^>]+>/g, '').trim() === value.trim()
 
-  // Visualização “editor desabilitado”: mesmo estilo da área de conteúdo do editor, sem bordas, só leitura
   const editorContentClass =
-    'prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed min-h-[60px] px-3 py-2 rounded-lg [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_p]:block [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li]:mb-1'
+    'prose prose-base dark:prose-invert max-w-none text-base leading-relaxed text-foreground min-h-[60px] px-3 py-2 rounded-lg [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_p]:block [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li]:mb-1 [&_span]:text-[length:inherit]'
 
   return (
     <div className="rounded-lg bg-muted/20 overflow-hidden">
@@ -553,10 +608,25 @@ function ChecklistBlockComponent({
 function ImagesBlockComponent({ block }: { block: ImagesBlock }) {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
 
-  if (!block.images || block.images.length === 0) return null
+  if ((!block.images || block.images.length === 0) && !block.placeholder) return null
 
   const selectedImage = selectedImageId ? block.images.find((img) => img.id === selectedImageId) : null
   const withBorder = block.cardWithBorder !== false
+
+  if (!block.images || block.images.length === 0) {
+    return (
+      <Card className="border-amber-300 bg-amber-50/60 dark:bg-amber-950/20">
+        <CardContent className="pt-6 pb-6">
+          <p className="font-medium text-amber-900 dark:text-amber-100">
+            🖼️ {block.placeholder?.title ?? 'Imagem pendente'}
+          </p>
+          {block.placeholder?.description && (
+            <p className="mt-2 text-sm text-amber-800/90 dark:text-amber-200/90">{block.placeholder.description}</p>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <>
@@ -963,7 +1033,7 @@ function QuizQuestionCard({
       <p className="mb-3 text-sm font-medium text-muted-foreground">Pergunta {questionNumber}</p>
       <p className={cn('mb-4 font-medium', isKids ? 'text-xl' : 'text-lg')}>{question.question}</p>
       <div className="space-y-2">
-        {question.options.map((option) => {
+        {question.options.map((option, i) => {
           const isSelected = selectedOption === option.id
           const showOptionCorrect = submitted && option.id === question.correctOptionId
           const showIncorrect = submitted && isSelected && !isCorrect
@@ -990,7 +1060,7 @@ function QuizQuestionCard({
                     : 'border-muted-foreground/30'
                 )}
               >
-                {option.id.toUpperCase()}
+                {getQuizOptionLabel(i)}
               </div>
               <span className="flex-1">{option.text}</span>
               {showOptionCorrect && <CheckCircle className="h-5 w-5 text-green-600" />}
@@ -1000,7 +1070,7 @@ function QuizQuestionCard({
         })}
       </div>
       {submitted && (
-        <div className="mt-3">
+        <div className="mt-3 space-y-2">
           {showCorrect ? (
             <Badge className={isKids ? 'bg-secondary text-white h-10 px-4 text-base' : 'bg-green-100 text-green-700 h-8 px-3'}>
               <CheckCircle className="mr-1 h-3 w-3" />
@@ -1015,6 +1085,9 @@ function QuizQuestionCard({
                 </>
               )}
             </Badge>
+          )}
+          {question.explanation && (
+            <p className="text-sm text-muted-foreground rounded-md bg-muted/40 p-3">{question.explanation}</p>
           )}
         </div>
       )}

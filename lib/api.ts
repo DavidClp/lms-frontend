@@ -208,6 +208,36 @@ export const lessonsApi = {
     fetchApi<void>(`/lessons/${id}`, {
       method: 'DELETE',
     }),
+  importDocx: async (
+    file: File,
+    options: { moduleId?: string; order?: number; title?: string; preview?: boolean }
+  ): Promise<{ title: string; content: import('@/types').ContentBlock[] } & Partial<import('@/types').Lesson>> => {
+    const token = localStorage.getItem('lms_token')
+    const formData = new FormData()
+    formData.append('file', file)
+    if (options.moduleId) formData.append('moduleId', options.moduleId)
+    if (options.order != null) formData.append('order', String(options.order))
+    if (options.title) formData.append('title', options.title)
+    if (options.preview) formData.append('preview', 'true')
+
+    const response = await fetch(`${API_URL}/lessons/import-docx`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    if (!response.ok) {
+      let errorMessage = `API Error: ${response.statusText}`
+      try {
+        const errorData = await response.json()
+        if (typeof errorData?.message === 'string') errorMessage = errorData.message
+        if (typeof errorData?.error === 'string') errorMessage = errorData.error
+      } catch {
+        /* ignore */
+      }
+      throw new Error(errorMessage)
+    }
+    return response.json()
+  },
 }
 
 // Users API

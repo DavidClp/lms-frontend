@@ -28,11 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType, Gamepad2, Upload } from 'lucide-react'
-import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock, GameBlock } from '@/types'
+import { Plus, Trash2, GripVertical, FileText, Video, CheckSquare, HelpCircle, ImageIcon, X, Loader2, PenLine, Layout, Table2, FileType, Gamepad2, Upload, BookOpen, MessageSquare } from 'lucide-react'
+import type { ContentBlock, BlockType, QuizBlock, QuizQuestion, ImageWithCaption, ImagesBlock, TableBlock, GameBlock, SectionBlock, CalloutBlock, CalloutVariant } from '@/types'
 import { normalizeImagesBlock } from '@/types'
 import { imagesApi } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { cn, getQuizOptionLabel } from '@/lib/utils'
 import { countWords, KIDS_TEXT_LIMITS } from '@/lib/kids-messages'
 import { formatSecondsAsMmSs, parseTimeInputToSeconds } from '@/lib/youtube-start'
 import { Textarea } from '../ui/textarea'
@@ -47,6 +47,8 @@ interface BlockEditorProps {
 
 function createBlockByType(type: BlockType): ContentBlock {
   if (type === 'TEXT') return { type: 'TEXT', value: '' }
+  if (type === 'SECTION') return { type: 'SECTION', level: 2, title: '', eyebrow: '' }
+  if (type === 'CALLOUT') return { type: 'CALLOUT', variant: 'tip', title: '', value: '' }
   if (type === 'VIDEO') return { type: 'VIDEO', url: '', title: '', isGoogleDrive: false }
   if (type === 'IFRAME') return { type: 'IFRAME', url: '', title: '' }
   if (type === 'ACTIVITY_CHECKLIST') return { type: 'ACTIVITY_CHECKLIST', title: '', items: [''] }
@@ -155,6 +157,18 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
                   isKidsModule={isKidsModule}
                 />
               )}
+              {block.type === 'SECTION' && (
+                <SectionBlockEditor
+                  block={block}
+                  onChange={(updated) => updateBlock(index, updated)}
+                />
+              )}
+              {block.type === 'CALLOUT' && (
+                <CalloutBlockEditor
+                  block={block}
+                  onChange={(updated) => updateBlock(index, updated)}
+                />
+              )}
               {block.type === 'VIDEO' && (
                 <VideoBlockEditor
                   url={block.url}
@@ -208,16 +222,17 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
                 return (
                   <ImageBlockEditor
                     images={normalized.images}
+                    placeholder={current.placeholder}
                     cardWithBorder={normalized.cardWithBorder ?? true}
                     imageLayout={normalized.imageLayout ?? 'column'}
                     onChange={(images) =>
-                      updateBlock(index, { type: 'IMAGES', images, cardWithBorder: current.cardWithBorder ?? true, imageLayout: current.imageLayout ?? 'column' })
+                      updateBlock(index, { type: 'IMAGES', images, placeholder: current.placeholder, cardWithBorder: current.cardWithBorder ?? true, imageLayout: current.imageLayout ?? 'column' })
                     }
                     onCardWithBorderChange={(cardWithBorder) =>
-                      updateBlock(index, { type: 'IMAGES', images: normalized.images, cardWithBorder, imageLayout: current.imageLayout ?? 'column' })
+                      updateBlock(index, { type: 'IMAGES', images: normalized.images, placeholder: current.placeholder, cardWithBorder, imageLayout: current.imageLayout ?? 'column' })
                     }
                     onImageLayoutChange={(imageLayout) =>
-                      updateBlock(index, { type: 'IMAGES', images: normalized.images, cardWithBorder: current.cardWithBorder ?? true, imageLayout })
+                      updateBlock(index, { type: 'IMAGES', images: normalized.images, placeholder: current.placeholder, cardWithBorder: current.cardWithBorder ?? true, imageLayout })
                     }
                   />
                 )
@@ -339,6 +354,8 @@ export function BlockEditor({ blocks, onChange, isKidsModule = false }: BlockEdi
 
 const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: React.ReactNode }[] = [
   { value: 'TEXT', label: 'Texto', icon: <FileText className="h-4 w-4" /> },
+  { value: 'SECTION', label: 'Seção', icon: <BookOpen className="h-4 w-4" /> },
+  { value: 'CALLOUT', label: 'Destaque', icon: <MessageSquare className="h-4 w-4" /> },
   { value: 'VIDEO', label: 'Vídeo', icon: <Video className="h-4 w-4" /> },
   { value: 'IFRAME', label: 'Iframe (embed)', icon: <Layout className="h-4 w-4" /> },
   { value: 'ACTIVITY_CHECKLIST', label: 'Checklist', icon: <CheckSquare className="h-4 w-4" /> },
@@ -1015,6 +1032,7 @@ const SIZE_CHANGE_THRESHOLD_PX = 8
 
 function ImageBlockEditor({
   images,
+  placeholder,
   cardWithBorder,
   imageLayout,
   onChange,
@@ -1022,6 +1040,7 @@ function ImageBlockEditor({
   onImageLayoutChange,
 }: {
   images: ImageWithCaption[]
+  placeholder?: ImagesBlock['placeholder']
   cardWithBorder: boolean
   imageLayout: 'column' | 'row'
   onChange: (images: ImageWithCaption[]) => void
@@ -1073,6 +1092,13 @@ function ImageBlockEditor({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {placeholder && images.length === 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:bg-amber-950/30">
+            <p className="font-medium text-amber-900 dark:text-amber-100">🖼️ Imagem pendente: {placeholder.title}</p>
+            <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">{placeholder.description}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Adicione o print abaixo para substituir este placeholder.</p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -1302,8 +1328,9 @@ function QuizBlockEditor({
               question={q.question}
               options={q.options}
               correctOptionId={q.correctOptionId}
-              onChange={(question, options, correctOptionId) =>
-                updateQuestion(qIndex, { ...q, question, options, correctOptionId })
+              explanation={q.explanation}
+              onChange={(question, options, correctOptionId, explanation) =>
+                updateQuestion(qIndex, { ...q, question, options, correctOptionId, explanation })
               }
             />
           </div>
@@ -1320,28 +1347,30 @@ function SingleQuestionEditor({
   question,
   options,
   correctOptionId,
+  explanation,
   onChange,
 }: {
   question: string
   options: { id: string; text: string }[]
   correctOptionId: string
-  onChange: (question: string, options: { id: string; text: string }[], correctOptionId: string) => void
+  explanation?: string
+  onChange: (question: string, options: { id: string; text: string }[], correctOptionId: string, explanation?: string) => void
 }) {
   const updateOption = (index: number, text: string) => {
     const next = [...options]
     next[index] = { ...next[index], text }
-    onChange(question, next, correctOptionId)
+    onChange(question, next, correctOptionId, explanation)
   }
 
   const addOption = () => {
     const id = String.fromCharCode(97 + options.length)
-    onChange(question, [...options, { id, text: '' }], correctOptionId)
+    onChange(question, [...options, { id, text: '' }], correctOptionId, explanation)
   }
 
   const removeOption = (index: number) => {
     const next = options.filter((_, i) => i !== index)
     const newCorrect = next.find((o) => o.id === correctOptionId) ? correctOptionId : next[0]?.id ?? ''
-    onChange(question, next, newCorrect)
+    onChange(question, next, newCorrect, explanation)
   }
 
   return (
@@ -1350,7 +1379,7 @@ function SingleQuestionEditor({
         <Label>Enunciado</Label>
         <Textarea
           value={question}
-          onChange={(e) => onChange(e.target.value, options, correctOptionId)}
+          onChange={(e) => onChange(e.target.value, options, correctOptionId, explanation)}
           placeholder="Digite a pergunta..."
           rows={2}
         />
@@ -1360,12 +1389,12 @@ function SingleQuestionEditor({
         {options.map((option, i) => (
           <div key={option.id} className="flex items-center gap-2">
             <span className="w-6 shrink-0 text-center text-sm font-medium text-muted-foreground uppercase">
-              {option.id}
+              {getQuizOptionLabel(i)}
             </span>
             <Input
               value={option.text}
               onChange={(e) => updateOption(i, e.target.value)}
-              placeholder={`Opção ${option.id.toUpperCase()}`}
+              placeholder={`Opção ${getQuizOptionLabel(i)}`}
             />
             <Button
               variant="ghost"
@@ -1385,20 +1414,151 @@ function SingleQuestionEditor({
         <Label>Resposta correta</Label>
         <Select
           value={correctOptionId}
-          onValueChange={(v) => onChange(question, options, v)}
+          onValueChange={(v) => onChange(question, options, v, explanation)}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {options.map((option) => (
+            {options.map((option, i) => (
               <SelectItem key={option.id} value={option.id}>
-                {option.id.toUpperCase()} — {option.text || '(sem texto)'}
+                {getQuizOptionLabel(i)} — {option.text || '(sem texto)'}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+      <div className="space-y-1">
+        <Label>Explicação da resposta (opcional)</Label>
+        <Textarea
+          value={explanation ?? ''}
+          onChange={(e) => onChange(question, options, correctOptionId, e.target.value || undefined)}
+          placeholder="Texto exibido ao aluno após corrigir..."
+          rows={2}
+        />
+      </div>
     </div>
+  )
+}
+
+function SectionBlockEditor({
+  block,
+  onChange,
+}: {
+  block: SectionBlock
+  onChange: (block: SectionBlock) => void
+}) {
+  return (
+    <Card className="gap-0 border-[#1E7145]/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <BookOpen className="h-4 w-4" /> Seção
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Nível</Label>
+            <Select
+              value={String(block.level)}
+              onValueChange={(v) => onChange({ ...block, level: Number(v) as 1 | 2 })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Título principal</SelectItem>
+                <SelectItem value="2">Subtítulo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Eyebrow (opcional)</Label>
+            <Input
+              value={block.eyebrow ?? ''}
+              onChange={(e) => onChange({ ...block, eyebrow: e.target.value || undefined })}
+              placeholder="Ex: AULA 4.1"
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label>Título</Label>
+          <Input
+            value={block.title}
+            onChange={(e) => onChange({ ...block, title: e.target.value })}
+            placeholder="Título da seção"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Subtítulo (opcional)</Label>
+          <Input
+            value={block.subtitle ?? ''}
+            onChange={(e) => onChange({ ...block, subtitle: e.target.value || undefined })}
+            placeholder="Texto complementar"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+const CALLOUT_VARIANTS: { value: CalloutVariant; label: string }[] = [
+  { value: 'tip', label: 'Dica' },
+  { value: 'example', label: 'Exemplo / Estrutura' },
+  { value: 'warning', label: 'Atenção' },
+  { value: 'exercise', label: 'Exercício' },
+  { value: 'note', label: 'Nota' },
+]
+
+function CalloutBlockEditor({
+  block,
+  onChange,
+}: {
+  block: CalloutBlock
+  onChange: (block: CalloutBlock) => void
+}) {
+  return (
+    <Card className="gap-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <MessageSquare className="h-4 w-4" /> Destaque
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label>Variante</Label>
+            <Select
+              value={block.variant}
+              onValueChange={(v) => onChange({ ...block, variant: v as CalloutVariant })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CALLOUT_VARIANTS.map((v) => (
+                  <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Ícone (opcional)</Label>
+            <Input
+              value={block.icon ?? ''}
+              onChange={(e) => onChange({ ...block, icon: e.target.value || undefined })}
+              placeholder="💡"
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label>Título (opcional)</Label>
+          <Input
+            value={block.title ?? ''}
+            onChange={(e) => onChange({ ...block, title: e.target.value || undefined })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Conteúdo</Label>
+          <RichTextEditor value={block.value} onChange={(value) => onChange({ ...block, value })} />
+        </div>
+      </CardContent>
+    </Card>
   )
 }

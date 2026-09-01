@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
-import { Plus, ArrowLeft, Edit, Trash2, GripVertical, FileText } from 'lucide-react'
+import { Plus, ArrowLeft, Edit, Trash2, GripVertical, FileText, FileUp } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext,
@@ -49,7 +49,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/layout/empty-state'
 import { useModule, useModuleLessons, useCreateLesson, useUpdateLesson, useDeleteLesson } from '@/hooks/use-api'
-import type { Lesson } from '@/types'
+import type { Lesson, ContentBlock } from '@/types'
+import { lessonsApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { trackFromModule, adminModulesBasePath } from '@/lib/content-audience'
 
@@ -88,6 +89,13 @@ export default function ModuleLessonsPage() {
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
   const [deletingLessonId, setDeletingLessonId] = useState<string | null>(null)
   const [dialogKind, setDialogKind] = useState<'LESSON' | 'EXAM'>(kind)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importTitle, setImportTitle] = useState('')
+  const [importOrder, setImportOrder] = useState(1)
+  const [importPreview, setImportPreview] = useState<ContentBlock[] | null>(null)
+  const [importSummary, setImportSummary] = useState<Record<string, number>>({})
+  const [isImporting, setIsImporting] = useState(false)
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CreateLessonData>({
     defaultValues: { moduleId, title: '', order: 1, kind, content: [], isActive: true }
@@ -186,6 +194,68 @@ export default function ModuleLessonsPage() {
     }
   }
 
+  const resetImportState = () => {
+    setImportFile(null)
+    setImportTitle('')
+    setImportOrder(orderedLessons.length + 1)
+    setImportPreview(null)
+    setImportSummary({})
+    setIsImporting(false)
+  }
+
+  const openImportDialog = () => {
+    resetImportState()
+    setImportOrder(orderedLessons.length + 1)
+    setIsImportOpen(true)
+  }
+
+  const summarizeBlocks = (blocks: ContentBlock[]) => {
+    const counts: Record<string, number> = {}
+    for (const block of blocks) {
+      counts[block.type] = (counts[block.type] ?? 0) + 1
+    }
+    return counts
+  }
+
+  const handleImportFileChange = async (file: File | null) => {
+    setImportFile(file)
+    setImportPreview(null)
+    setImportSummary({})
+    if (!file) return
+    setIsImporting(true)
+    try {
+      const result = await lessonsApi.importDocx(file, { preview: true })
+      setImportTitle(result.title)
+      setImportPreview(result.content)
+      setImportSummary(summarizeBlocks(result.content))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao ler o arquivo .docx')
+      setImportFile(null)
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    if (!importFile || !importPreview) return
+    setIsImporting(true)
+    try {
+      const lesson = await lessonsApi.importDocx(importFile, {
+        moduleId,
+        order: importOrder,
+        title: importTitle.trim() || undefined,
+      })
+      toast.success('Aula importada com sucesso!')
+      setIsImportOpen(false)
+      resetImportState()
+      router.push(`/admin/lessons/${lesson.id}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao importar aula')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -217,7 +287,13 @@ export default function ModuleLessonsPage() {
           title={`${kindLabel}: ${module.title}`}
           description={`Gerencie as ${kindLabel.toLowerCase()} deste módulo`}
         >
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {kind === 'LESSON' && (
+              <Button variant="outline" onClick={openImportDialog}>
+                <FileUp className="mr-2 h-4 w-4" />
+                Importar .docx
+              </Button>
+            )}
             <Button variant={kind === 'LESSON' ? 'default' : 'outline'} onClick={() => openCreateDialog('LESSON')}>
               <Plus className="mr-2 h-4 w-4" />
               {isKids ? 'Nova Missão' : 'Nova Aula'}
@@ -334,6 +410,83 @@ export default function ModuleLessonsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Importação .docx */}
+      <Dialog open={isImportOpen} onOpenChange={(open) => { setIsImportOpen(open); if (!open) resetImportState() }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Importar aula a partir de .docx</DialogTitle>
+            <DialogDescription>
+              Envie o arquivo gerado pela IA. O sistema criará uma aula com blocos de texto, tabelas, destaques, quiz e placeholders de imagem.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="docx-file">Arquivo .docx</Label>
+              <Input
+                id="docx-file"
+                type="file"
+                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => handleImportFileChange(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            {isImporting && !importPreview && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Spinner className="h-4 w-4" />
+                Analisando documento...
+              </div>
+            )}
+            {importPreview && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="import-title">Título da aula</Label>
+                  <Input
+                    id="import-title"
+                    value={importTitle}
+                    onChange={(e) => setImportTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="import-order">Ordem</Label>
+                  <Input
+                    id="import-order"
+                    type="number"
+                    min={1}
+                    value={importOrder}
+                    onChange={(e) => setImportOrder(Number(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <p className="font-medium mb-2">{importPreview.length} blocos gerados</p>
+                  <ul className="grid grid-cols-2 gap-1 text-muted-foreground">
+                    {Object.entries(importSummary).map(([type, count]) => (
+                      <li key={type}>{type}: {count}</li>
+                    ))}
+                  </ul>
+                  {(importSummary.IMAGES ?? 0) > 0 && (
+                    <p className="mt-2 text-amber-700 dark:text-amber-300">
+                      {importSummary.IMAGES} print(s) pendente(s) — você poderá enviar as imagens no editor depois.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsImportOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={!importPreview || isImporting}
+              onClick={handleConfirmImport}
+            >
+              {isImporting && <Spinner className="mr-2 h-4 w-4" />}
+              Criar aula
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
