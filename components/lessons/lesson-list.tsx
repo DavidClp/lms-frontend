@@ -64,9 +64,9 @@ export function LessonList({
                 {lesson.title}
               </Link>
               <div className="mt-1 flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
+               {/*  <Badge variant="outline" className="text-xs">
                   {lesson.content?.length || 0} blocos
-                </Badge>
+                </Badge> */}
                 {completed && (
                   <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
                     Concluída

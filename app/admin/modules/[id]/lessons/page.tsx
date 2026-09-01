@@ -552,9 +552,9 @@ function SortableLessonRow({
         </div>
         <div>
           <h4 className="font-medium">{lesson.title}</h4>
-          <p className="text-sm text-muted-foreground">
+         {/*  <p className="text-sm text-muted-foreground">
             {lesson.content.length} {lesson.content.length === 1 ? 'bloco' : 'blocos'} de conteúdo
-          </p>
+          </p> */}
         </div>
       </div>
       <div className="flex items-center gap-2">
